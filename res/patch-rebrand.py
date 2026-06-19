@@ -44,6 +44,9 @@ def apply_rebranding(base_dir):
         if replacement_fn not in patched:
             patched = re.sub(r'pub fn using_public_server\(\) -> bool \{\s+crate::get_custom_rendezvous_server\(get_option\("custom-rendezvous-server"\)\)\.is_empty\(\)\s+\}', 'pub fn using_public_server() -> bool {\n    false\n}', patched)
             
+        # Also replace admin.rustdesk.com with hexdesk.com.tr
+        patched = patched.replace('"https://admin.rustdesk.com"', '"https://hexdesk.com.tr"')
+            
         if patched != content:
             with open(common_path, "w", encoding="utf-8") as f:
                 f.write(patched)
