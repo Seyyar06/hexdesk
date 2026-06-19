@@ -11,6 +11,28 @@ import argparse
 import sys
 from pathlib import Path
 
+# Patch libs/hbb_common/src/config.rs dynamically with company values
+try:
+    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "libs", "hbb_common", "src", "config.rs")
+    if os.path.exists(config_path):
+        print(f"Patching config.rs at {config_path}...")
+        with open(config_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        patched = content
+        if "rs-ny.rustdesk.com" in patched:
+            patched = patched.replace("rs-ny.rustdesk.com", "hexdesk.com.tr")
+        if "OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=" in patched:
+            patched = patched.replace("OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=", "uCzBnD5VRqcscpc0HOvxnjOakhoedBZqid+EsGJ4byQ=")
+        if "https://rustdesk.com/docs/en/" in patched:
+            patched = patched.replace("https://rustdesk.com/docs/en/", "https://hexdesk.com.tr")
+        if "https://rustdesk.com/docs/en/manual/linux/#x11-required" in patched:
+            patched = patched.replace("https://rustdesk.com/docs/en/manual/linux/#x11-required", "https://hexdesk.com.trmanual/linux/#x11-required")
+        with open(config_path, "w", encoding="utf-8") as f:
+            f.write(patched)
+        print("config.rs patched successfully!")
+except Exception as e:
+    print(f"Failed to patch config.rs: {e}")
+
 windows = platform.platform().startswith('Windows')
 osx = platform.platform().startswith(
     'Darwin') or platform.platform().startswith("macOS")

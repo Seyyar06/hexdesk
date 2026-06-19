@@ -158,6 +158,20 @@ fn generate_bindings(
         b = b.clang_arg(format!("-I{}", dir.display()));
     }
 
+    // On Windows/MSVC, pass MSVC system include paths to bindgen so it can
+    // fully resolve struct definitions (otherwise structs appear as opaque).
+    // The INCLUDE env var is set by VsDevCmd.bat / Developer Command Prompt.
+    if let Ok(include_env) = std::env::var("INCLUDE") {
+        for inc_dir in include_env.split(';') {
+            let trimmed = inc_dir.trim();
+            if !trimmed.is_empty() {
+                b = b.clang_arg(format!("-I{}", trimmed));
+            }
+        }
+        // Tell bindgen we are targeting x86_64 MSVC (not MinGW/clang-cl)
+        b = b.clang_arg("--target=x86_64-pc-windows-msvc");
+    }
+
     b.generate().unwrap().write_to_file(ffi_rs).unwrap();
     fs::copy(ffi_rs, exact_file).ok(); // ignore failure
 }
@@ -169,15 +183,26 @@ fn gen_vcpkg_package(package: &str, ffi_header: &str, generated: &str, regex: &s
     let out_dir = env::var_os("OUT_DIR").unwrap();
     let out_dir = Path::new(&out_dir);
 
-    let ffi_header = src_dir.join("src").join("bindings").join(ffi_header);
-    println!("rerun-if-changed={}", ffi_header.display());
+    let ffi_header_path = src_dir.join("src").join("bindings").join(ffi_header);
+    println!("rerun-if-changed={}", ffi_header_path.display());
     for dir in &includes {
         println!("rerun-if-changed={}", dir.display());
     }
 
     let ffi_rs = out_dir.join(generated);
     let exact_file = src_dir.join("generated").join(generated);
-    generate_bindings(&ffi_header, &includes, &ffi_rs, &exact_file, regex);
+
+    // If a pre-generated (manually verified) binding file exists, use it directly.
+    // This bypasses bindgen's opaque-struct issue on Windows when MSVC system
+    // headers are not on the clang search path.
+    if exact_file.exists() {
+        println!("cargo:warning=Using pre-generated binding: {}", exact_file.display());
+        fs::copy(&exact_file, &ffi_rs)
+            .unwrap_or_else(|e| panic!("Failed to copy pre-generated binding {:?}: {}", exact_file, e));
+        return;
+    }
+
+    generate_bindings(&ffi_header_path, &includes, &ffi_rs, &exact_file, regex);
 }
 
 // If you have problems installing ffmpeg, you can download $VCPKG_ROOT/installed from ci

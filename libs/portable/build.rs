@@ -8,7 +8,11 @@ fn main() {
                 winapi::um::winnt::LANG_ENGLISH,
                 winapi::um::winnt::SUBLANG_ENGLISH_US,
             ))
-            .set_manifest_file("../../res/manifest.xml");
+            .set_manifest_file("../../res/manifest.xml")
+            .set("CompanyName", "Hex Yazılım")
+            .set("FileDescription", "HexDesk Remote Desktop")
+            .set("ProductName", "HexDesk")
+            .set("LegalCopyright", "Copyright © 2026 Hex Yazılım. Tüm hakları saklıdır.");
         match res.compile() {
             Err(e) => {
                 write!(std::io::stderr(), "{}", e).unwrap();
