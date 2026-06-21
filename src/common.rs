@@ -2807,7 +2807,7 @@ mod tests {
         ));
         assert!(!should_use_tcp_proxy_for_api_url(
             "https://admin.rustdesk.com/api/login",
-            "https://admin.rustdesk.com"
+            "https://hexdesk.com.tr"
         ));
         assert!(!should_use_tcp_proxy_for_api_url(
             "https://admin.example.com/api/login",
