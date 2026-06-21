@@ -26,6 +26,23 @@ def apply_rebranding(base_dir):
         else:
             print("config.rs no changes.")
 
+    # 1b. libs/hbb_common/src/lib.rs
+    lib_path = os.path.join(base_dir, "libs", "hbb_common", "src", "lib.rs")
+    if os.path.exists(lib_path):
+        print(f"Patching lib.rs at {lib_path}...")
+        with open(lib_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        
+        patched = content
+        patched = patched.replace('const URL: &str = "https://api.rustdesk.com/version/latest";', 'const URL: &str = "https://hexdesk.com.tr/api/version/latest";')
+        
+        if patched != content:
+            with open(lib_path, "w", encoding="utf-8") as f:
+                f.write(patched)
+            print("lib.rs patched successfully!")
+        else:
+            print("lib.rs no changes.")
+
     # 2. src/common.rs
     common_path = os.path.join(base_dir, "src", "common.rs")
     if os.path.exists(common_path):
