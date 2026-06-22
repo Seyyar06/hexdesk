@@ -109,6 +109,37 @@ class ChatPage extends StatelessWidget implements PageShape {
                       inputTextStyle: TextStyle(
                           fontSize: 14,
                           color: Theme.of(context).textTheme.titleLarge?.color),
+                      leading: [
+                        Builder(
+                          builder: (context) => IconButton(
+                            icon: const Icon(Icons.sentiment_satisfied_alt),
+                            color: MyTheme.accent,
+                            onPressed: () {
+                              final List<String> emojis = ['😊', '😂', '👍', '❤️', '🎉', '🔥', '👏', '🤔', '😎', '😢'];
+                              showMenu(
+                                context: context,
+                                position: const RelativeRect.fromLTRB(16, 200, 100, 0),
+                                items: emojis.map((emoji) {
+                                  return PopupMenuItem<String>(
+                                    value: emoji,
+                                    height: 36,
+                                    child: Center(
+                                      child: Text(
+                                        emoji,
+                                        style: const TextStyle(fontSize: 22),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ).then((selectedEmoji) {
+                                if (selectedEmoji != null) {
+                                  chatModel.textController.text += selectedEmoji;
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ],
                       inputDecoration: InputDecoration(
                         isDense: true,
                         hintText: translate('Write a message'),

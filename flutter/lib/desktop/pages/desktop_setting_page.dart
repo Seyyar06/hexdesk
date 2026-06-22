@@ -70,8 +70,7 @@ class DesktopSettingPage extends StatefulWidget {
         !bind.isDisableSettings() &&
         bind.mainGetBuildinOption(key: kOptionHideSecuritySetting) != 'Y')
       SettingsTabKey.safety,
-    if (!bind.isDisableSettings() &&
-        bind.mainGetBuildinOption(key: kOptionHideNetworkSetting) != 'Y')
+    if (false)
       SettingsTabKey.network,
     if (!bind.isIncomingOnly()) SettingsTabKey.display,
     if (!isWeb && !bind.isIncomingOnly() && bind.pluginFeatureIsEnabled())
@@ -2443,6 +2442,18 @@ class _AboutState extends State<_About> {
                 SelectionArea(
                     child: Text('${translate('Fingerprint')}: $fingerprint')
                         .marginSymmetric(vertical: 4.0)),
+              if (!isWeb)
+                ElevatedButton(
+                  onPressed: () {
+                    showToast(localeName.startsWith('tr') ? 'Güncellemeler denetleniyor...' : 'Checking for updates...');
+                    bind.mainGetSoftwareUpdateUrl();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: MyTheme.button,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(localeName.startsWith('tr') ? 'Güncellemeleri Denetle' : 'Check for Updates'),
+                ).marginSymmetric(vertical: 8.0),
               InkWell(
                   onTap: () {
                     launchUrlString('https://hexdesk.com.tr');
