@@ -966,6 +966,14 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
                 ),
                 leading: Icon(Icons.info)),
             SettingsTile(
+              onPressed: (context) {
+                showToast(localeName.startsWith('tr') ? 'Güncellemeler denetleniyor...' : 'Checking for updates...');
+                bind.mainGetSoftwareUpdateUrl();
+              },
+              title: Text(localeName.startsWith('tr') ? 'Güncellemeleri Denetle' : 'Check for Updates'),
+              leading: const Icon(Icons.update),
+            ),
+            SettingsTile(
                 title: Text(translate("Build Date")),
                 value: Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
@@ -1092,22 +1100,49 @@ void showThemeSettings(OverlayDialogManager dialogManager) async {
 void showAbout(OverlayDialogManager dialogManager) {
   dialogManager.show((setState, close, context) {
     return CustomAlertDialog(
-      title: Text(translate('About RustDesk')),
-      content: Wrap(direction: Axis.vertical, spacing: 12, children: [
-        Text('Version: $version'),
-        InkWell(
-            onTap: () async {
-              const url = 'https://hexdesk.com.tr/';
-              await launchUrl(Uri.parse(url));
-            },
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('hexdesk.com.tr',
-                  style: TextStyle(
-                    decoration: TextDecoration.underline,
-                  )),
-            )),
-      ]),
+      title: Text(translate('About HexDesk')),
+      content: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [
+              MyTheme.accent,
+              MyTheme.button,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${translate('Version')}: $version',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+                onTap: () async {
+                  const url = 'https://hexdesk.com.tr/';
+                  await launchUrl(Uri.parse(url));
+                },
+                child: const Text('hexdesk.com.tr',
+                    style: TextStyle(
+                      color: Colors.white,
+                      decoration: TextDecoration.underline,
+                      fontWeight: FontWeight.w600,
+                    ))),
+            const SizedBox(height: 16),
+            Text(
+              'Copyright © ${DateTime.now().toString().substring(0, 4)} Hex Yazılım',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
       actions: [],
     );
   }, clickMaskDismiss: true, backDismiss: true);
