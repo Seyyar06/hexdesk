@@ -601,20 +601,22 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         Container(
           margin: EdgeInsets.fromLTRB(
               0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
-          child: Container(
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
-                ],
-              )),
-              padding: EdgeInsets.all(20),
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+                decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    MyTheme.button,
+                    MyTheme.accent,
+                  ],
+                )),
+                padding: EdgeInsets.all(20),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                   children: (title.isNotEmpty
                           ? <Widget>[
                               Center(

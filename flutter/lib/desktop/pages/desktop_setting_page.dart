@@ -2471,9 +2471,26 @@ class _AboutState extends State<_About> {
                     style: linkStyle,
                   ).marginSymmetric(vertical: 4.0)),
               Container(
-                decoration: const BoxDecoration(color: Color(0xFF2c8cff)),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      MyTheme.accent,
+                      MyTheme.button,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: MyTheme.accent.withOpacity(0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 padding:
-                    const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+                    const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                 child: SelectionArea(
                     child: Row(
                   children: [
