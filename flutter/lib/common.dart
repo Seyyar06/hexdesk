@@ -4040,7 +4040,16 @@ void checkUpdate() {
         kCheckSoftwareUpdateFinish, kCheckSoftwareUpdateFinish,
         (Map<String, dynamic> evt) async {
       if (evt['url'] is String) {
-        stateGlobal.updateUrl.value = evt['url'];
+        final url = evt['url'] as String;
+        stateGlobal.updateUrl.value = url;
+        if (stateGlobal.isManualUpdateCheck) {
+          stateGlobal.isManualUpdateCheck = false;
+          if (url.isEmpty) {
+            showToast(localeName.startsWith('tr') ? 'Uygulamanız güncel.' : 'Your application is up to date.');
+          } else {
+            showToast(localeName.startsWith('tr') ? 'Yeni bir güncelleme mevcut!' : 'A new update is available!');
+          }
+        }
       }
     });
     if (!bind.isCustomClient()) {

@@ -26,6 +26,7 @@ class StateGlobal {
   final isPortrait = false.obs;
 
   final updateUrl = ''.obs;
+  bool isManualUpdateCheck = false;
 
   String _inputSource = '';
 

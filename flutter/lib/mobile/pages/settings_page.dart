@@ -968,6 +968,7 @@ class _SettingsState extends State<SettingsPage> with WidgetsBindingObserver {
             SettingsTile(
               onPressed: (context) {
                 showToast(localeName.startsWith('tr') ? 'Güncellemeler denetleniyor...' : 'Checking for updates...');
+                stateGlobal.isManualUpdateCheck = true;
                 bind.mainGetSoftwareUpdateUrl();
               },
               title: Text(localeName.startsWith('tr') ? 'Güncellemeleri Denetle' : 'Check for Updates'),

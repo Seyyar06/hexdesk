@@ -2446,6 +2446,7 @@ class _AboutState extends State<_About> {
                 ElevatedButton(
                   onPressed: () {
                     showToast(localeName.startsWith('tr') ? 'Güncellemeler denetleniyor...' : 'Checking for updates...');
+                    stateGlobal.isManualUpdateCheck = true;
                     bind.mainGetSoftwareUpdateUrl();
                   },
                   style: ElevatedButton.styleFrom(

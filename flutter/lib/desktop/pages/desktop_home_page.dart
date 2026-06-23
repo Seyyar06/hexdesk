@@ -3,9 +3,14 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/common/widgets/peer_tab_page.dart';
+import 'package:flutter_hbb/common/widgets/dialog.dart';
+import 'package:flutter_hbb/common/formatter/id_formatter.dart';
+import 'package:flutter_hbb/models/peer_model.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
 import 'package:flutter_hbb/common/widgets/custom_password.dart';
 import 'package:flutter_hbb/consts.dart';
@@ -38,6 +43,10 @@ const borderColor = Color(0xFF2F65BA);
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final _leftPaneScrollController = ScrollController();
+  String _currentMenu = 'home';
+  final _remoteIdController = IDTextEditingController();
+  final _remoteIdEditingController = TextEditingController();
+  final FocusNode _remoteIdFocusNode = FocusNode();
 
   @override
   bool get wantKeepAlive => true;
@@ -60,14 +69,36 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget build(BuildContext context) {
     super.build(context);
     final isIncomingOnly = bind.isIncomingOnly();
+    if (isIncomingOnly) {
+      return _buildBlock(
+          child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          buildLeftPane(context),
+        ],
+      ));
+    }
+
     return _buildBlock(
-        child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        buildLeftPane(context),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
-        if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
-      ],
+        child: Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFF0F1015),
+            Color(0xFF1B1D28),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          buildLeftPane(context),
+          const VerticalDivider(width: 1, color: Color(0xFF2C2F3A)),
+          Expanded(child: buildRightPane(context)),
+        ],
+      ),
     ));
   }
 
@@ -79,42 +110,40 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget buildLeftPane(BuildContext context) {
     final isIncomingOnly = bind.isIncomingOnly();
     final isOutgoingOnly = bind.isOutgoingOnly();
-    final children = <Widget>[
-      if (!isOutgoingOnly) buildPresetPasswordWarning(),
-      if (bind.isCustomClient())
+    if (isIncomingOnly) {
+      final children = <Widget>[
+        if (!isOutgoingOnly) buildPresetPasswordWarning(),
+        if (bind.isCustomClient())
+          Align(
+            alignment: Alignment.center,
+            child: loadPowered(context),
+          ),
         Align(
           alignment: Alignment.center,
-          child: loadPowered(context),
+          child: loadLogo(),
         ),
-      Align(
-        alignment: Alignment.center,
-        child: loadLogo(),
-      ),
-      buildTip(context),
-      if (!isOutgoingOnly) buildIDBoard(context),
-      if (!isOutgoingOnly) buildPasswordBoard(context),
-      FutureBuilder<Widget>(
-        future: Future.value(
-            Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
-        builder: (_, data) {
-          if (data.hasData) {
-            if (isIncomingOnly) {
-              if (isInHomePage()) {
-                Future.delayed(Duration(milliseconds: 300), () {
-                  _updateWindowSize();
-                });
+        buildTip(context),
+        if (!isOutgoingOnly) buildIDBoard(context),
+        if (!isOutgoingOnly) buildPasswordBoard(context),
+        FutureBuilder<Widget>(
+          future: Future.value(
+              Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
+          builder: (_, data) {
+            if (data.hasData) {
+              if (isIncomingOnly) {
+                if (isInHomePage()) {
+                  Future.delayed(Duration(milliseconds: 300), () {
+                    _updateWindowSize();
+                  });
+                }
               }
+              return data.data!;
+            } else {
+              return const Offstage();
             }
-            return data.data!;
-          } else {
-            return const Offstage();
-          }
-        },
-      ),
-      buildPluginEntry(),
-    ];
-    if (isIncomingOnly) {
-      children.addAll([
+          },
+        ),
+        buildPluginEntry(),
         Divider(),
         OnlineStatusWidget(
           onSvcStatusChanged: () {
@@ -125,65 +154,921 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             }
           },
         ).marginOnly(bottom: 6, right: 6)
-      ]);
+      ];
+      final textColor = Theme.of(context).textTheme.titleLarge?.color;
+      return ChangeNotifierProvider.value(
+        value: gFFI.serverModel,
+        child: Container(
+          width: 280.0,
+          color: Theme.of(context).colorScheme.background,
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  SingleChildScrollView(
+                    controller: _leftPaneScrollController,
+                    child: Column(
+                      key: _childKey,
+                      children: children,
+                    ),
+                  ),
+                  Expanded(child: Container())
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
     }
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    return ChangeNotifierProvider.value(
-      value: gFFI.serverModel,
-      child: Container(
-        width: isIncomingOnly ? 280.0 : 200.0,
-        color: Theme.of(context).colorScheme.background,
-        child: Stack(
-          children: [
-            Column(
+
+    // Premium sidebar layout (standard mode)
+    return Container(
+      width: 220.0,
+      color: const Color(0xFF1B1D22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Logo Area
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            alignment: Alignment.centerLeft,
+            child: Row(
               children: [
-                SingleChildScrollView(
-                  controller: _leftPaneScrollController,
-                  child: Column(
-                    key: _childKey,
-                    children: children,
+                SizedBox(width: 32, height: 32, child: loadLogo()),
+                const SizedBox(width: 10),
+                const Text(
+                  'HexDesk',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                Expanded(child: Container())
               ],
             ),
-            if (isOutgoingOnly)
-              Positioned(
-                bottom: 6,
-                left: 12,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    child: Obx(
-                      () => Icon(
-                        Icons.settings,
-                        color: _editHover.value
-                            ? textColor
-                            : Colors.grey.withOpacity(0.5),
-                        size: 22,
-                      ),
+          ),
+          const SizedBox(height: 10),
+          // Top Navigation List
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                _buildSidebarItem(
+                  icon: Icons.home_rounded,
+                  label: localeName.startsWith('tr') ? 'Ana Sayfa' : 'Home',
+                  menuId: 'home',
+                ),
+                _buildSidebarItem(
+                  icon: Icons.desktop_windows_rounded,
+                  label: localeName.startsWith('tr') ? 'Cihazlar' : 'Remotes',
+                  menuId: 'remotes',
+                ),
+                _buildSidebarItem(
+                  icon: Icons.sync_alt_rounded,
+                  label: localeName.startsWith('tr') ? 'Bağlantılar' : 'Connections',
+                  menuId: 'connections',
+                ),
+                _buildSidebarItem(
+                  icon: Icons.security_rounded,
+                  label: localeName.startsWith('tr') ? 'Güvenlik' : 'Security',
+                  menuId: 'security',
+                ),
+                _buildSidebarItem(
+                  icon: Icons.settings_rounded,
+                  label: localeName.startsWith('tr') ? 'Ayarlar' : 'Settings',
+                  menuId: 'settings',
+                ),
+                _buildSidebarItem(
+                  icon: Icons.help_outline_rounded,
+                  label: localeName.startsWith('tr') ? 'Yardım' : 'Help',
+                  menuId: 'help',
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(color: Color(0xFF2B2E3A), height: 1),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Text(
+                    localeName.startsWith('tr') ? 'KATEGORİLER' : 'CATEGORIES',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
                     ),
-                    onTap: () => {
-                      if (DesktopSettingPage.tabKeys.isNotEmpty)
-                        {
-                          DesktopSettingPage.switch2page(
-                              DesktopSettingPage.tabKeys[0])
-                        }
-                    },
-                    onHover: (value) => _editHover.value = value,
                   ),
                 ),
-              )
+                _buildSidebarItem(
+                  icon: Icons.folder_shared_rounded,
+                  label: localeName.startsWith('tr') ? 'Tüm Cihazlar' : 'All Remotes',
+                  menuId: 'all_remotes',
+                ),
+                _buildSidebarItem(
+                  icon: Icons.group_rounded,
+                  label: localeName.startsWith('tr') ? 'Gruplar' : 'Groups',
+                  menuId: 'groups',
+                ),
+                _buildSidebarItem(
+                  icon: Icons.account_circle_rounded,
+                  label: localeName.startsWith('tr') ? 'Profiller' : 'Profiles',
+                  menuId: 'profiles',
+                ),
+                _buildSidebarItem(
+                  icon: Icons.history_rounded,
+                  label: localeName.startsWith('tr') ? 'Loglar' : 'Logs',
+                  menuId: 'logs',
+                ),
+              ],
+            ),
+          ),
+          // Version info at bottom
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              'v${bind.mainGetNewVersion().isEmpty ? "1.4.8" : bind.mainGetNewVersion()}',
+              style: const TextStyle(color: Colors.grey, fontSize: 11),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem({
+    required IconData icon,
+    required String label,
+    required String menuId,
+  }) {
+    final isSelected = _currentMenu == menuId;
+    return InkWell(
+      onTap: () {
+        if (menuId == 'help') {
+          launchUrl(Uri.parse('https://hexdesk.com.tr'));
+          return;
+        }
+        setState(() {
+          _currentMenu = menuId;
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF00F0FF).withOpacity(0.08) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: isSelected
+              ? Border.all(color: const Color(0xFF00F0FF).withOpacity(0.3), width: 1)
+              : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF00F0FF).withOpacity(0.05),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  )
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? const Color(0xFF00F0FF) : Colors.grey,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : const Color(0xFFBBBBBB),
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 13.5,
+                ),
+              ),
+            ),
+            if (menuId == 'all_remotes')
+              Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF00C2FF),
+                  shape: BoxShape.circle,
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  buildRightPane(BuildContext context) {
+  Widget buildRightPane(BuildContext context) {
+    if (_currentMenu == 'home') {
+      return buildMockupHome(context);
+    } else if (_currentMenu == 'remotes' || _currentMenu == 'all_remotes' || _currentMenu == 'groups') {
+      return Container(
+        color: const Color(0xFF0F1015),
+        padding: const EdgeInsets.all(16.0),
+        child: const PeerTabPage(),
+      );
+    } else if (_currentMenu == 'settings') {
+      return Container(
+        color: const Color(0xFF0F1015),
+        child: DesktopSettingPage(initialTabkey: SettingsTabKey.general),
+      );
+    } else if (_currentMenu == 'security') {
+      return Container(
+        color: const Color(0xFF0F1015),
+        child: DesktopSettingPage(initialTabkey: SettingsTabKey.safety),
+      );
+    } else if (_currentMenu == 'connections') {
+      return buildConnectionsView(context);
+    } else if (_currentMenu == 'logs') {
+      return buildLogsView(context);
+    } else if (_currentMenu == 'profiles') {
+      return buildComingSoonView(context, localeName.startsWith('tr') ? 'Profiller' : 'Profiles');
+    }
+
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: ConnectionPage(),
+      color: const Color(0xFF0F1015),
+      child: const Center(
+        child: Text('Under Construction', style: TextStyle(color: Colors.white)),
+      ),
+    );
+  }
+
+  Widget buildMockupHome(BuildContext context) {
+    final isOutgoingOnly = bind.isOutgoingOnly();
+
+    return Container(
+      color: Colors.transparent,
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildGlassmorphicCard(
+                          title: localeName.startsWith('tr') ? 'Güvenli Uzak Erişim' : 'Secure Remote Access',
+                          subtitle: localeName.startsWith('tr')
+                              ? 'Bağlanmak istediğiniz cihazın bilgilerini girin'
+                              : 'Enter details of the remote device you want to connect to',
+                          child: _buildRemoteConnectionForm(context),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      if (!isOutgoingOnly)
+                        Expanded(
+                          child: _buildGlassmorphicCard(
+                            title: localeName.startsWith('tr') ? 'Bu Bilgisayar' : 'Your Credentials',
+                            subtitle: localeName.startsWith('tr')
+                                ? 'Uzak bağlantı izni vermek için bu bilgileri paylaşın'
+                                : 'Share these credentials to allow remote control of this PC',
+                            child: _buildLocalCredentialsForm(context),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        localeName.startsWith('tr') ? 'Son Bağlantılar' : 'Recent Desktops',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (!isCardClosed)
+                        FutureBuilder<Widget>(
+                          future: Future.value(
+                              Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
+                          builder: (_, data) {
+                            if (data.hasData) return data.data!;
+                            return const SizedBox();
+                          },
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  buildRecentDesktopsHorizontalList(context),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFF2C2F3A)),
+          Container(
+            color: const Color(0xFF16181F),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const OnlineStatusWidget(),
+                Text(
+                  localeName.startsWith('tr') ? 'Güvenli Bağlantı Hazır' : 'Secure Connection Active',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassmorphicCard({
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.08),
+          width: 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 12,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                child,
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRemoteConnectionForm(BuildContext context) {
+    RxBool isFocused = false.obs;
+    _remoteIdFocusNode.addListener(() {
+      isFocused.value = _remoteIdFocusNode.hasFocus;
+    });
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Obx(() => Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: isFocused.value
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF00F0FF).withOpacity(0.12),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        )
+                      ]
+                    : [],
+              ),
+              child: TextFormField(
+                focusNode: _remoteIdFocusNode,
+                controller: _remoteIdEditingController,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontFamily: 'WorkSans',
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+                decoration: InputDecoration(
+                  hintText: localeName.startsWith('tr')
+                      ? 'Uzak Cihaz ID veya HexID Girin...'
+                      : 'Enter Remote Address or HexID...',
+                  hintStyle: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                    fontWeight: FontWeight.normal,
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFF14151B),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(
+                      color: isFocused.value
+                          ? const Color(0xFF00F0FF)
+                          : const Color(0xFF2C2F3A),
+                      width: 1.5,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF2C2F3A),
+                      width: 1.2,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF00F0FF),
+                      width: 1.5,
+                    ),
+                  ),
+                  suffixIcon: _remoteIdEditingController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.grey, size: 18),
+                          onPressed: () {
+                            setState(() {
+                              _remoteIdEditingController.clear();
+                              _remoteIdController.id = '';
+                            });
+                          },
+                        )
+                      : null,
+                ),
+                onChanged: (v) {
+                  _remoteIdController.id = v;
+                },
+                onFieldSubmitted: (_) => onConnect(),
+              ).workaroundFreezeLinuxMint(),
+            )),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF9D4EDD),
+                  Color(0xFF7B2CBF),
+                ],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF7B2CBF).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ElevatedButton.icon(
+              onPressed: () => onConnect(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              icon: const Icon(Icons.shield_rounded, color: Colors.white, size: 18),
+              label: Text(
+                localeName.startsWith('tr') ? 'Güvenle Bağlan' : 'Connect Securely',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void onConnect(
+      {bool isFileTransfer = false,
+      bool isViewCamera = false,
+      bool isTerminal = false}) {
+    var id = _remoteIdController.id;
+    connect(context, id,
+        isFileTransfer: isFileTransfer,
+        isViewCamera: isViewCamera,
+        isTerminal: isTerminal);
+  }
+
+  Widget _buildLocalCredentialsForm(BuildContext context) {
+    final model = gFFI.serverModel;
+    final showOneTime = model.approveMode != 'click' &&
+        model.verificationMethod != kUsePermanentPassword;
+    final RxBool isObscured = true.obs;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF14151B),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF2C2F3A), width: 1.2),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'ID',
+                    style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  SelectableText(
+                    model.serverId.text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy_rounded, color: Color(0xFF00F0FF), size: 20),
+                tooltip: translate("Copy"),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: model.serverId.text));
+                  showToast(translate("Copied"));
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF14151B),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFF2C2F3A), width: 1.2),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      translate("One-time Password"),
+                      style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 2),
+                    Obx(() => Text(
+                          isObscured.value ? '••••••••' : model.serverPasswd.text,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.0,
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  Obx(() => IconButton(
+                        icon: Icon(
+                          isObscured.value ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                          color: Colors.grey,
+                          size: 18,
+                        ),
+                        onPressed: () => isObscured.toggle(),
+                      )),
+                  if (showOneTime)
+                    AnimatedRotationWidget(
+                      onPressed: () {
+                        bind.mainUpdateTemporaryPassword();
+                        setState(() {});
+                      },
+                      child: const Tooltip(
+                        message: 'Refresh Password',
+                        child: Icon(Icons.refresh_rounded, color: Colors.grey, size: 18),
+                      ),
+                    ),
+                  if (!bind.isDisableSettings())
+                    IconButton(
+                      icon: const Icon(Icons.edit_rounded, color: Colors.grey, size: 18),
+                      onPressed: () {
+                        setPasswordDialog(notEmptyCallback: () => setState(() {}));
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildRecentDesktopsHorizontalList(BuildContext context) {
+    return AnimatedBuilder(
+      animation: gFFI.recentPeersModel,
+      builder: (context, _) {
+        final peers = gFFI.recentPeersModel.peers;
+        if (peers.isEmpty) {
+          return Container(
+            height: 120,
+            width: double.infinity,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.015),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.04)),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.desktop_access_disabled_rounded, color: Colors.grey, size: 28),
+                const SizedBox(height: 10),
+                Text(
+                  localeName.startsWith('tr')
+                      ? 'Son bağlantı bulunamadı. Bağlanmak için yukarıdan bir ID girin.'
+                      : 'No recent connections. Enter a remote ID above to connect.',
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return SizedBox(
+          height: 155,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: peers.length,
+            itemBuilder: (context, index) {
+              final peer = peers[index];
+              return _buildRecentDesktopCard(context, peer);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRecentDesktopCard(BuildContext context, Peer peer) {
+    final hideUsernameOnCard = bind.mainGetBuildinOption(key: kHideUsernameOnCard) == 'Y';
+    final name = hideUsernameOnCard == true
+        ? peer.hostname
+        : '${peer.username}${peer.username.isNotEmpty && peer.hostname.isNotEmpty ? '@' : ''}${peer.hostname}';
+    final alias = peer.alias.isEmpty ? formatID(peer.id) : peer.alias;
+
+    return Container(
+      width: 250,
+      margin: const EdgeInsets.only(right: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B1D28),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF2C2F3A),
+          width: 1.2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    getPlatformImage(peer.platform, size: 20),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: peer.online ? const Color(0xFF00FFCC) : Colors.grey,
+                        shape: BoxShape.circle,
+                        boxShadow: peer.online
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFF00FFCC).withOpacity(0.4),
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
+                                )
+                              ]
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 16),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    _showPeerOptionsMenu(context, peer);
+                  },
+                ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  alias,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  name,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(
+              width: double.infinity,
+              height: 32,
+              child: OutlinedButton(
+                onPressed: () => connect(context, peer.id),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF00F0FF), width: 1.2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  backgroundColor: const Color(0xFF00F0FF).withOpacity(0.08),
+                ),
+                child: Text(
+                  localeName.startsWith('tr') ? 'Bağlan' : 'Connect',
+                  style: const TextStyle(
+                    color: Color(0xFF00F0FF),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPeerOptionsMenu(BuildContext context, Peer peer) {
+    final x = MediaQuery.of(context).size.width / 2;
+    final y = MediaQuery.of(context).size.height / 2;
+
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(x, y, x, y),
+      items: [
+        PopupMenuItem(
+          value: 'remove',
+          child: Row(
+            children: [
+              const Icon(Icons.delete_rounded, color: Colors.red, size: 18),
+              const SizedBox(width: 8),
+              Text(localeName.startsWith('tr') ? 'Uzaklaştır / Sil' : 'Remove'),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) async {
+      if (value == 'remove') {
+        onSubmit() async {
+          await bind.mainRemovePeer(id: peer.id);
+          bind.mainLoadRecentPeers();
+          showToast(translate('Successful'));
+        }
+        deleteConfirmDialog(onSubmit, translate('Delete'));
+      }
+    });
+  }
+
+  Widget buildConnectionsView(BuildContext context) {
+    return Container(
+      color: const Color(0xFF0F1015),
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            localeName.startsWith('tr') ? 'Aktif Bağlantılar' : 'Active Connections',
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Center(
+              child: Text(
+                localeName.startsWith('tr') ? 'Aktif bağlantı bulunmamaktadır.' : 'No active connections.',
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildLogsView(BuildContext context) {
+    return Container(
+      color: const Color(0xFF0F1015),
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            localeName.startsWith('tr') ? 'Bağlantı Günlükleri' : 'Connection Logs',
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Center(
+              child: Text(
+                localeName.startsWith('tr') ? 'Henüz kaydedilmiş günlük bulunmuyor.' : 'No logs recorded yet.',
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildComingSoonView(BuildContext context, String title) {
+    return Container(
+      color: const Color(0xFF0F1015),
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.construction_rounded, color: Colors.grey, size: 48),
+                  const SizedBox(height: 16),
+                  Text(
+                    localeName.startsWith('tr')
+                        ? 'Bu özellik yakında aktif edilecektir.'
+                        : 'This feature is coming soon.',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -696,6 +1581,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   void initState() {
     super.initState();
+    bind.mainLoadRecentPeers();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final lastRemoteId = await bind.mainGetLastRemoteId();
+      if (lastRemoteId != _remoteIdController.id) {
+        setState(() {
+          _remoteIdController.id = lastRemoteId;
+          _remoteIdEditingController.text = lastRemoteId;
+        });
+      }
+    });
+    Get.put<TextEditingController>(_remoteIdEditingController);
+    Get.put<IDTextEditingController>(_remoteIdController);
     _updateTimer = periodic_immediate(const Duration(seconds: 1), () async {
       await gFFI.serverModel.fetchID();
       final error = await bind.mainGetError();
@@ -875,6 +1772,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
 
   @override
   void dispose() {
+    _remoteIdController.dispose();
+    _remoteIdEditingController.dispose();
+    _remoteIdFocusNode.dispose();
+    if (Get.isRegistered<IDTextEditingController>()) {
+      Get.delete<IDTextEditingController>();
+    }
+    if (Get.isRegistered<TextEditingController>()) {
+      Get.delete<TextEditingController>();
+    }
     _uniLinksSubscription?.cancel();
     Get.delete<RxBool>(tag: 'stop-service');
     _updateTimer?.cancel();
