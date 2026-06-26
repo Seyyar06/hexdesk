@@ -79,14 +79,21 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       ));
     }
 
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return _buildBlock(
         child: Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFF0F1015),
-            Color(0xFF1B1D28),
-          ],
+          colors: isDark
+              ? const [
+                  Color(0xFF0F1015),
+                  Color(0xFF1B1D28),
+                ]
+              : const [
+                  Color(0xFFF7F8FA),
+                  Color(0xFFEAECEF),
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -95,7 +102,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           buildLeftPane(context),
-          const VerticalDivider(width: 1, color: Color(0xFF2C2F3A)),
+          VerticalDivider(
+              width: 1,
+              color:
+                  isDark ? const Color(0xFF2C2F3A) : const Color(0xFFD0D3DC)),
           Expanded(child: buildRightPane(context)),
         ],
       ),
@@ -182,9 +192,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
 
     // Premium sidebar layout (standard mode)
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: 220.0,
-      color: const Color(0xFF1B1D22),
+      color: isDark ? const Color(0xFF1B1D22) : const Color(0xFFF0F2F5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -196,10 +207,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               children: [
                 SizedBox(width: 32, height: 32, child: loadLogo()),
                 const SizedBox(width: 10),
-                const Text(
+                Text(
                   'HexDesk',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : Colors.black,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
@@ -244,16 +255,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   label: localeName.startsWith('tr') ? 'Yardım' : 'Help',
                   menuId: 'help',
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(color: Color(0xFF2B2E3A), height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(
+                      color: isDark
+                          ? const Color(0xFF2B2E3A)
+                          : const Color(0xFFD0D3DC),
+                      height: 1),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Text(
                     localeName.startsWith('tr') ? 'KATEGORİLER' : 'CATEGORIES',
-                    style: const TextStyle(
-                      color: Colors.grey,
+                    style: TextStyle(
+                      color: isDark ? Colors.grey : const Color(0xFF6B7280),
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.0,
@@ -271,11 +286,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   menuId: 'groups',
                 ),
                 _buildSidebarItem(
-                  icon: Icons.account_circle_rounded,
-                  label: localeName.startsWith('tr') ? 'Profiller' : 'Profiles',
-                  menuId: 'profiles',
-                ),
-                _buildSidebarItem(
                   icon: Icons.history_rounded,
                   label: localeName.startsWith('tr') ? 'Loglar' : 'Logs',
                   menuId: 'logs',
@@ -288,7 +298,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             padding: const EdgeInsets.all(16.0),
             child: Text(
               'v${bind.mainGetNewVersion().isEmpty ? "1.4.8" : bind.mainGetNewVersion()}',
-              style: const TextStyle(color: Colors.grey, fontSize: 11),
+              style: TextStyle(
+                  color: isDark ? Colors.grey : const Color(0xFF6B7280),
+                  fontSize: 11),
             ),
           ),
         ],
@@ -301,6 +313,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     required String label,
     required String menuId,
   }) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = _currentMenu == menuId;
     return InkWell(
       onTap: () {
@@ -317,15 +330,25 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF00F0FF).withOpacity(0.08) : Colors.transparent,
+          color: isSelected
+              ? (isDark
+                  ? const Color(0xFF00F0FF).withOpacity(0.08)
+                  : const Color(0xFF2F65BA).withOpacity(0.08))
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: isSelected
-              ? Border.all(color: const Color(0xFF00F0FF).withOpacity(0.3), width: 1)
+              ? Border.all(
+                  color: isDark
+                      ? const Color(0xFF00F0FF).withOpacity(0.3)
+                      : const Color(0xFF2F65BA).withOpacity(0.3),
+                  width: 1)
               : null,
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF00F0FF).withOpacity(0.05),
+                    color: isDark
+                        ? const Color(0xFF00F0FF).withOpacity(0.05)
+                        : const Color(0xFF2F65BA).withOpacity(0.05),
                     blurRadius: 8,
                     spreadRadius: 1,
                   )
@@ -336,7 +359,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           children: [
             Icon(
               icon,
-              color: isSelected ? const Color(0xFF00F0FF) : Colors.grey,
+              color: isSelected
+                  ? (isDark ? const Color(0xFF00F0FF) : const Color(0xFF2F65BA))
+                  : (isDark ? Colors.grey : const Color(0xFF6B7280)),
               size: 20,
             ),
             const SizedBox(width: 12),
@@ -344,7 +369,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFFBBBBBB),
+                  color: isSelected
+                      ? (isDark ? Colors.white : const Color(0xFF2F65BA))
+                      : (isDark
+                          ? const Color(0xFFBBBBBB)
+                          : const Color(0xFF4A4A4A)),
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 13.5,
                 ),
@@ -354,8 +383,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               Container(
                 width: 6,
                 height: 6,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF00C2FF),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF00C2FF)
+                      : const Color(0xFF2F65BA),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -366,41 +397,54 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildRightPane(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? const Color(0xFF0F1015) : Theme.of(context).scaffoldBackgroundColor;
+
     if (_currentMenu == 'home') {
       return buildMockupHome(context);
     } else if (_currentMenu == 'remotes' || _currentMenu == 'all_remotes' || _currentMenu == 'groups') {
       return Container(
-        color: const Color(0xFF0F1015),
+        color: backgroundColor,
         padding: const EdgeInsets.all(16.0),
         child: const PeerTabPage(),
       );
     } else if (_currentMenu == 'settings') {
       return Container(
-        color: const Color(0xFF0F1015),
-        child: DesktopSettingPage(initialTabkey: SettingsTabKey.general),
+        color: backgroundColor,
+        child: DesktopSettingPage(
+          key: const ValueKey('settings_page_general'),
+          initialTabkey: SettingsTabKey.general,
+        ),
       );
     } else if (_currentMenu == 'security') {
       return Container(
-        color: const Color(0xFF0F1015),
-        child: DesktopSettingPage(initialTabkey: SettingsTabKey.safety),
+        color: backgroundColor,
+        child: DesktopSettingPage(
+          key: const ValueKey('settings_page_safety'),
+          initialTabkey: SettingsTabKey.safety,
+        ),
       );
     } else if (_currentMenu == 'connections') {
       return buildConnectionsView(context);
     } else if (_currentMenu == 'logs') {
       return buildLogsView(context);
-    } else if (_currentMenu == 'profiles') {
-      return buildComingSoonView(context, localeName.startsWith('tr') ? 'Profiller' : 'Profiles');
     }
 
     return Container(
-      color: const Color(0xFF0F1015),
-      child: const Center(
-        child: Text('Under Construction', style: TextStyle(color: Colors.white)),
+      color: backgroundColor,
+      child: Center(
+        child: Text(
+          'Under Construction',
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
       ),
     );
   }
 
   Widget buildMockupHome(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final isOutgoingOnly = bind.isOutgoingOnly();
 
     return Container(
@@ -444,8 +488,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     children: [
                       Text(
                         localeName.startsWith('tr') ? 'Son Bağlantılar' : 'Recent Desktops',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -467,17 +511,24 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ),
             ),
           ),
-          const Divider(height: 1, color: Color(0xFF2C2F3A)),
+          Divider(
+              height: 1,
+              color:
+                  isDark ? const Color(0xFF2C2F3A) : const Color(0xFFD0D3DC)),
           Container(
-            color: const Color(0xFF16181F),
+            color: isDark ? const Color(0xFF16181F) : const Color(0xFFF0F2F5),
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const OnlineStatusWidget(),
                 Text(
-                  localeName.startsWith('tr') ? 'Güvenli Bağlantı Hazır' : 'Secure Connection Active',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  localeName.startsWith('tr')
+                      ? 'Güvenli Bağlantı Hazır'
+                      : 'Secure Connection Active',
+                  style: TextStyle(
+                      color: isDark ? Colors.grey : const Color(0xFF6B7280),
+                      fontSize: 12),
                 ),
               ],
             ),
@@ -492,12 +543,17 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     required String subtitle,
     required Widget child,
   }) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: isDark
+            ? Colors.white.withOpacity(0.03)
+            : Colors.black.withOpacity(0.03),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.08),
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.black.withOpacity(0.08),
           width: 1,
         ),
       ),
@@ -512,8 +568,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
                     fontSize: 16.5,
                     fontWeight: FontWeight.bold,
                   ),
@@ -522,7 +578,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Colors.grey.shade400,
+                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                     fontSize: 12,
                     height: 1.3,
                   ),
@@ -538,6 +594,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget _buildRemoteConnectionForm(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     RxBool isFocused = false.obs;
     _remoteIdFocusNode.addListener(() {
       isFocused.value = _remoteIdFocusNode.hasFocus;
@@ -552,7 +609,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 boxShadow: isFocused.value
                     ? [
                         BoxShadow(
-                          color: const Color(0xFF00F0FF).withOpacity(0.12),
+                          color: isDark
+                              ? const Color(0xFF00F0FF).withOpacity(0.12)
+                              : const Color(0xFF2F65BA).withOpacity(0.12),
                           blurRadius: 10,
                           spreadRadius: 2,
                         )
@@ -562,8 +621,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               child: TextFormField(
                 focusNode: _remoteIdFocusNode,
                 controller: _remoteIdEditingController,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
                   fontFamily: 'WorkSans',
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -573,40 +632,41 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   hintText: localeName.startsWith('tr')
                       ? 'Uzak Cihaz ID veya HexID Girin...'
                       : 'Enter Remote Address or HexID...',
-                  hintStyle: const TextStyle(
-                    color: Colors.grey,
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.grey : const Color(0xFF8E8E93),
                     fontSize: 14,
                     fontWeight: FontWeight.normal,
                   ),
                   filled: true,
-                  fillColor: const Color(0xFF14151B),
+                  fillColor:
+                      isDark ? const Color(0xFF14151B) : Colors.white,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide(
                       color: isFocused.value
-                          ? const Color(0xFF00F0FF)
-                          : const Color(0xFF2C2F3A),
+                          ? (isDark ? const Color(0xFF00F0FF) : const Color(0xFF2F65BA))
+                          : (isDark ? const Color(0xFF2C2F3A) : const Color(0xFFD0D3DC)),
                       width: 1.5,
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2C2F3A),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF2C2F3A) : const Color(0xFFD0D3DC),
                       width: 1.2,
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF00F0FF),
+                    borderSide: BorderSide(
+                      color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF2F65BA),
                       width: 1.5,
                     ),
                   ),
                   suffixIcon: _remoteIdEditingController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.grey, size: 18),
+                          icon: Icon(Icons.clear, color: isDark ? Colors.grey : const Color(0xFF8E8E93), size: 18),
                           onPressed: () {
                             setState(() {
                               _remoteIdEditingController.clear();
@@ -683,6 +743,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget _buildLocalCredentialsForm(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final model = gFFI.serverModel;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
@@ -694,50 +755,105 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: const Color(0xFF14151B),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF14151B)
+                : const Color(0xFFF7F8FA),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF2C2F3A), width: 1.2),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF2C2F3A)
+                  : const Color(0xFFE4E6EB),
+              width: 1.2,
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: AnimatedBuilder(
+            animation: model,
+            builder: (context, _) {
+              final idText = model.serverId.text;
+              final bool isIdReady = idText.isNotEmpty &&
+                  idText != '...' &&
+                  !idText.toLowerCase().contains('generat') &&
+                  !idText.toLowerCase().contains('oluş');
+
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'ID',
-                    style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 2),
-                  SelectableText(
-                    model.serverId.text,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'ID',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        if (isIdReady)
+                          SelectableText(
+                            idText,
+                            style: TextStyle(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : Colors.black87,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          )
+                        else
+                          Row(
+                            children: [
+                              const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF00F0FF),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                localeName.startsWith('tr')
+                                    ? 'ID Hazırlanıyor...'
+                                    : 'Generating ID...',
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
                     ),
                   ),
+                  if (isIdReady)
+                    IconButton(
+                      icon: const Icon(Icons.copy_rounded, color: Color(0xFF00F0FF), size: 20),
+                      tooltip: translate("Copy"),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: idText));
+                        showToast(translate("Copied"));
+                      },
+                    ),
                 ],
-              ),
-              IconButton(
-                icon: const Icon(Icons.copy_rounded, color: Color(0xFF00F0FF), size: 20),
-                tooltip: translate("Copy"),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: model.serverId.text));
-                  showToast(translate("Copied"));
-                },
-              ),
-            ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFF14151B),
+            color: isDark ? const Color(0xFF14151B) : const Color(0xFFF7F8FA),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF2C2F3A), width: 1.2),
+            border: Border.all(
+              color: isDark ? const Color(0xFF2C2F3A) : const Color(0xFFE4E6EB),
+              width: 1.2,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -748,13 +864,17 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   children: [
                     Text(
                       translate("One-time Password"),
-                      style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: isDark ? Colors.grey : const Color(0xFF8E8E93),
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Obx(() => Text(
                           isObscured.value ? '••••••••' : model.serverPasswd.text,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.0,
@@ -768,7 +888,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   Obx(() => IconButton(
                         icon: Icon(
                           isObscured.value ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                          color: Colors.grey,
+                          color: isDark ? Colors.grey : const Color(0xFF8E8E93),
                           size: 18,
                         ),
                         onPressed: () => isObscured.toggle(),
@@ -779,14 +899,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         bind.mainUpdateTemporaryPassword();
                         setState(() {});
                       },
-                      child: const Tooltip(
+                      child: Tooltip(
                         message: 'Refresh Password',
-                        child: Icon(Icons.refresh_rounded, color: Colors.grey, size: 18),
+                        child: Icon(Icons.refresh_rounded, color: isDark ? Colors.grey : const Color(0xFF8E8E93), size: 18),
                       ),
                     ),
                   if (!bind.isDisableSettings())
                     IconButton(
-                      icon: const Icon(Icons.edit_rounded, color: Colors.grey, size: 18),
+                      icon: Icon(Icons.edit_rounded, color: isDark ? Colors.grey : const Color(0xFF8E8E93), size: 18),
                       onPressed: () {
                         setPasswordDialog(notEmptyCallback: () => setState(() {}));
                       },
@@ -801,6 +921,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildRecentDesktopsHorizontalList(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedBuilder(
       animation: gFFI.recentPeersModel,
       builder: (context, _) {
@@ -811,38 +932,163 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             width: double.infinity,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.015),
+              color: isDark
+                  ? Colors.white.withOpacity(0.015)
+                  : Colors.black.withOpacity(0.015),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.04)),
+              border: Border.all(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.04)
+                      : Colors.black.withOpacity(0.04)),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.desktop_access_disabled_rounded, color: Colors.grey, size: 28),
+                Icon(Icons.desktop_access_disabled_rounded,
+                    color: isDark ? Colors.grey : const Color(0xFF8E8E93),
+                    size: 28),
                 const SizedBox(height: 10),
                 Text(
                   localeName.startsWith('tr')
                       ? 'Son bağlantı bulunamadı. Bağlanmak için yukarıdan bir ID girin.'
                       : 'No recent connections. Enter a remote ID above to connect.',
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  style: TextStyle(
+                      color: isDark ? Colors.grey : const Color(0xFF6B7280),
+                      fontSize: 13),
                 ),
               ],
             ),
           );
         }
 
-        return SizedBox(
-          height: 155,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: peers.length,
-            itemBuilder: (context, index) {
-              final peer = peers[index];
-              return _buildRecentDesktopCard(context, peer);
-            },
-          ),
+        return Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: peers
+              .map((peer) => _buildRecentDesktopCard(context, peer))
+              .toList(),
         );
       },
+    );
+  }
+
+  Widget _buildDesktopThumbnail(BuildContext context, Peer peer) {
+    List<Color> gradientColors;
+    IconData osIcon;
+    if (peer.platform.toLowerCase().contains('win')) {
+      gradientColors = [const Color(0xFF0F2027), const Color(0xFF203A43), const Color(0xFF2C5364)];
+      osIcon = Icons.window_rounded;
+    } else if (peer.platform.toLowerCase().contains('mac')) {
+      gradientColors = [const Color(0xFF1F1C2C), const Color(0xFF928DAB)];
+      osIcon = Icons.apple_rounded;
+    } else if (peer.platform.toLowerCase().contains('lin')) {
+      gradientColors = [const Color(0xFF5C258D), const Color(0xFF4389A2)];
+      osIcon = Icons.terminal_rounded;
+    } else if (peer.platform.toLowerCase().contains('andr')) {
+      gradientColors = [const Color(0xFF11998e), const Color(0xFF38ef7d)];
+      osIcon = Icons.android_rounded;
+    } else {
+      gradientColors = [const Color(0xFF3a7bd5), const Color(0xFF3a6073)];
+      osIcon = Icons.desktop_windows_rounded;
+    }
+
+    return Container(
+      height: 90,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Container(
+              width: 90,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: Colors.white.withOpacity(0.15)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  )
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 3),
+                        Container(width: 2.5, height: 2.5, decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle)),
+                        const SizedBox(width: 1.5),
+                        Container(width: 2.5, height: 2.5, decoration: const BoxDecoration(color: Colors.amberAccent, shape: BoxShape.circle)),
+                        const SizedBox(width: 1.5),
+                        Container(width: 2.5, height: 2.5, decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle)),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(3.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(width: 30, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(1))),
+                          const SizedBox(height: 2),
+                          Container(width: 50, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(1))),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Container(width: 15, height: 8, decoration: BoxDecoration(color: const Color(0xFF00F0FF).withOpacity(0.2), borderRadius: BorderRadius.circular(1.5))),
+                              const SizedBox(width: 2),
+                              Container(width: 20, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(1))),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 8,
+              color: Colors.black.withOpacity(0.3),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(osIcon, color: Colors.white.withOpacity(0.7), size: 5),
+                  const SizedBox(width: 6),
+                  Container(width: 3, height: 1.5, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(0.5))),
+                  const SizedBox(width: 2),
+                  Container(width: 3, height: 1.5, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(0.5))),
+                  const SizedBox(width: 2),
+                  Container(width: 3, height: 1.5, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(0.5))),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -852,107 +1098,134 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ? peer.hostname
         : '${peer.username}${peer.username.isNotEmpty && peer.hostname.isNotEmpty ? '@' : ''}${peer.hostname}';
     final alias = peer.alias.isEmpty ? formatID(peer.id) : peer.alias;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: 250,
-      margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1B1D28),
+        color: isDark ? const Color(0xFF1B1D28) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF2C2F3A),
+          color: isDark ? const Color(0xFF2C2F3A) : const Color(0xFFE4E6EB),
           width: 1.2,
         ),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                )
+              ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    getPlatformImage(peer.platform, size: 20),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: peer.online ? const Color(0xFF00FFCC) : Colors.grey,
-                        shape: BoxShape.circle,
-                        boxShadow: peer.online
-                            ? [
-                                BoxShadow(
-                                  color: const Color(0xFF00FFCC).withOpacity(0.4),
-                                  blurRadius: 4,
-                                  spreadRadius: 1,
-                                )
-                              ]
-                            : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildDesktopThumbnail(context, peer),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          getPlatformImage(
+                            peer.platform,
+                            size: 16,
+                            color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: peer.online ? const Color(0xFF00FFCC) : Colors.grey,
+                              shape: BoxShape.circle,
+                              boxShadow: peer.online
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF00FFCC).withOpacity(0.4),
+                                        blurRadius: 4,
+                                        spreadRadius: 1,
+                                      )
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 16),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: () {
+                          _showPeerOptionsMenu(context, peer);
+                        },
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        alias,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        name,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                          fontSize: 10.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 28,
+                    child: OutlinedButton(
+                      onPressed: () => connect(context, peer.id),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF00A3B0),
+                          width: 1.2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        backgroundColor: isDark
+                            ? const Color(0xFF00F0FF).withOpacity(0.08)
+                            : const Color(0xFF00A3B0).withOpacity(0.05),
+                      ),
+                      child: Text(
+                        localeName.startsWith('tr') ? 'Bağlan' : 'Connect',
+                        style: TextStyle(
+                          color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF00A3B0),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 16),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: () {
-                    _showPeerOptionsMenu(context, peer);
-                  },
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  alias,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.bold,
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  name,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.grey.shade400,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(
-              width: double.infinity,
-              height: 32,
-              child: OutlinedButton(
-                onPressed: () => connect(context, peer.id),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF00F0FF), width: 1.2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  backgroundColor: const Color(0xFF00F0FF).withOpacity(0.08),
-                ),
-                child: Text(
-                  localeName.startsWith('tr') ? 'Bağlan' : 'Connect',
-                  style: const TextStyle(
-                    color: Color(0xFF00F0FF),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

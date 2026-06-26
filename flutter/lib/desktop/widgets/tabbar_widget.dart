@@ -640,10 +640,16 @@ class _DesktopTabState extends State<DesktopTab>
                         ),
                         Offstage(
                             offstage: !showTitle,
-                            child: const Text(
+                            child: Text(
                               "HexDesk",
-                              style: TextStyle(fontSize: 13),
-                            ).marginOnly(left: 2))
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black87,
+                              ),
+                            ).marginOnly(left: 4))
                       ]).marginOnly(
                         left: 5,
                         right: 10,
@@ -669,6 +675,7 @@ class _DesktopTabState extends State<DesktopTab>
                             child: _ListView(
                               controller: controller,
                               invisibleTabKeys: invisibleTabKeys,
+                              tail: widget.tail,
                               tabBuilder: tabBuilder,
                               tabMenuBuilder: tabMenuBuilder,
                               labelGetter: labelGetter,
@@ -765,7 +772,6 @@ class WindowActionPanelState extends State<WindowActionPanel> {
             return Offstage();
           }
         }),
-        if (widget.tail != null) widget.tail!,
         if (!kUseCompatibleUiMode)
           Row(
             children: [
@@ -920,6 +926,7 @@ Future<bool> closeConfirmDialog() async {
 class _ListView extends StatelessWidget {
   final DesktopTabController controller;
   final RxList<String> invisibleTabKeys;
+  final Widget? tail;
 
   final TabBuilder? tabBuilder;
   final TabMenuBuilder? tabMenuBuilder;
@@ -934,6 +941,7 @@ class _ListView extends StatelessWidget {
   _ListView({
     required this.controller,
     required this.invisibleTabKeys,
+    this.tail,
     this.tabBuilder,
     this.tabMenuBuilder,
     this.labelGetter,
@@ -975,50 +983,59 @@ class _ListView extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         children: isHideSingleItem()
             ? List.empty()
-            : state.value.tabs.asMap().entries.map((e) {
-                final index = e.key;
-                final tab = e.value;
-                final label = labelGetter == null
-                    ? Rx<String>(tab.label)
-                    : labelGetter!(tab.label);
-                final child = VisibilityDetector(
-                  key: ValueKey(tab.key),
-                  onVisibilityChanged: onVisibilityChanged,
-                  child: _Tab(
+            : [
+                ...state.value.tabs.asMap().entries.map((e) {
+                  final index = e.key;
+                  final tab = e.value;
+                  final label = labelGetter == null
+                      ? Rx<String>(tab.label)
+                      : labelGetter!(tab.label);
+                  final child = VisibilityDetector(
                     key: ValueKey(tab.key),
-                    index: index,
-                    tabInfoKey: tab.key,
-                    label: label,
-                    tabType: controller.tabType,
-                    selectedIcon: tab.selectedIcon,
-                    unselectedIcon: tab.unselectedIcon,
-                    closable: tab.closable,
-                    selected: state.value.selected,
-                    onClose: () {
-                      if (tab.onTabCloseButton != null) {
-                        tab.onTabCloseButton!();
-                      } else {
-                        controller.remove(index);
-                      }
-                    },
-                    onTap: () {
-                      controller.jumpTo(index);
-                      tab.onTap?.call();
-                    },
-                    tabBuilder: tabBuilder,
-                    tabMenuBuilder: tabMenuBuilder,
-                    maxLabelWidth: maxLabelWidth,
-                    selectedTabBackgroundColor: selectedTabBackgroundColor ??
-                        MyTheme.tabbar(context).selectedTabBackgroundColor,
-                    unSelectedTabBackgroundColor: unSelectedTabBackgroundColor,
-                    selectedBorderColor: selectedBorderColor,
+                    onVisibilityChanged: onVisibilityChanged,
+                    child: _Tab(
+                      key: ValueKey(tab.key),
+                      index: index,
+                      tabInfoKey: tab.key,
+                      label: label,
+                      tabType: controller.tabType,
+                      selectedIcon: tab.selectedIcon,
+                      unselectedIcon: tab.unselectedIcon,
+                      closable: tab.closable,
+                      selected: state.value.selected,
+                      onClose: () {
+                        if (tab.onTabCloseButton != null) {
+                          tab.onTabCloseButton!();
+                        } else {
+                          controller.remove(index);
+                        }
+                      },
+                      onTap: () {
+                        controller.jumpTo(index);
+                        tab.onTap?.call();
+                      },
+                      tabBuilder: tabBuilder,
+                      tabMenuBuilder: tabMenuBuilder,
+                      maxLabelWidth: maxLabelWidth,
+                      selectedTabBackgroundColor: selectedTabBackgroundColor ??
+                          MyTheme.tabbar(context).selectedTabBackgroundColor,
+                      unSelectedTabBackgroundColor: unSelectedTabBackgroundColor,
+                      selectedBorderColor: selectedBorderColor,
+                    ),
+                  );
+                  return GestureDetector(
+                    onPanStart: (e) {},
+                    child: child,
+                  );
+                }).toList(),
+                if (tail != null)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 6, right: 12),
+                      child: tail!,
+                    ),
                   ),
-                );
-                return GestureDetector(
-                  onPanStart: (e) {},
-                  child: child,
-                );
-              }).toList()));
+              ]));
   }
 }
 

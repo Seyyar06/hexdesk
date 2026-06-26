@@ -165,8 +165,13 @@ class _PeerCardState extends State<_PeerCard>
             height: isPortrait ? 50 : null,
             child: Stack(
               children: [
-                getPlatformImage(peer.platform, size: isPortrait ? 38 : 30)
-                    .paddingAll(6),
+                getPlatformImage(
+                  peer.platform,
+                  size: isPortrait ? 38 : 30,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : Colors.black87,
+                ).paddingAll(6),
                 if (_shouldBuildPasswordIcon(peer))
                   Positioned(
                     top: 1,
@@ -328,8 +333,14 @@ class _PeerCardState extends State<_PeerCard>
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(6),
-                                child:
-                                    getPlatformImage(peer.platform, size: 60),
+                                child: getPlatformImage(
+                                  peer.platform,
+                                  size: 60,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white70
+                                      : Colors.black87,
+                                ),
                               ),
                               Row(
                                 children: [
