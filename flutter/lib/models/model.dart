@@ -38,6 +38,9 @@ import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:vector_math/vector_math.dart' show Vector2;
 
 import '../common.dart';
@@ -3940,6 +3943,22 @@ class FFI {
 
   /// Close the remote session.
   Future<void> close({bool closeSession = true}) async {
+    final peerId = id;
+    if (peerId.isNotEmpty && !isWeb) {
+      try {
+        final docDir = (await getApplicationDocumentsDirectory()).path;
+        final thumbDir = Directory(path.join(docDir, 'HexDesk', 'thumbnails'));
+        if (!await thumbDir.exists()) {
+          await thumbDir.create(recursive: true);
+        }
+        final thumbPath = path.join(thumbDir.path, '$peerId.png');
+        await bind.sessionHandleScreenshot(sessionId: sessionId, action: '0:$thumbPath');
+        debugPrint('Saved session thumbnail to $thumbPath');
+      } catch (e) {
+        debugPrint('Failed to save session thumbnail: $e');
+      }
+    }
+
     closed = true;
     chatModel.close();
     // Close all terminal models

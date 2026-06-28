@@ -159,10 +159,13 @@ def get_deb_extra_depends() -> str:
     return ""
 
 def system2(cmd):
+    if platform.system() == 'Windows':
+        cmd = cmd.replace('python3 ', 'python ').replace('pip3 ', 'pip ')
     exit_code = os.system(cmd)
     if exit_code != 0:
         sys.stderr.write(f"Error occurred when executing: `{cmd}`. Exiting.\n")
         sys.exit(-1)
+
 
 
 def get_version():

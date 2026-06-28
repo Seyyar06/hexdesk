@@ -1289,6 +1289,8 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
     bool enabled = !locked;
     return _Card(title: 'Security', children: [
       shareRdp(context, enabled),
+      _OptionCheckBox(context, 'Yerel girişi önceliklendir (AnyDesk tarzı)', 'enable-local-input-priority',
+          reverse: false, enabled: enabled),
       _OptionCheckBox(context, 'Deny LAN discovery', 'enable-lan-discovery',
           reverse: true, enabled: enabled),
       ...directIp(context),
@@ -2445,7 +2447,33 @@ class _AboutState extends State<_About> {
               if (!isWeb)
                 ElevatedButton(
                   onPressed: () {
-                    showToast(localeName.startsWith('tr') ? 'Güncellemeler denetleniyor...' : 'Checking for updates...');
+                    Get.dialog(
+                      AlertDialog(
+                        backgroundColor: const Color(0xFF1B1D28),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: Text(
+                          localeName.startsWith('tr') ? 'Güncelleme Denetimi' : 'Check for Updates',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        content: Row(
+                          children: [
+                            const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(color: Color(0xFF00F0FF), strokeWidth: 2),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Text(
+                                localeName.startsWith('tr') ? 'Güncellemeler denetleniyor, lütfen bekleyin...' : 'Checking for updates, please wait...',
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      barrierDismissible: false,
+                    );
                     stateGlobal.isManualUpdateCheck = true;
                     bind.mainGetSoftwareUpdateUrl();
                   },

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
+import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -481,6 +483,55 @@ class _RemotePageState extends State<RemotePage>
                         ])
                       : remoteToolbar(context)),
               _ffi.ffiModel.pi.isSet.isFalse ? emptyOverlay() : Offstage(),
+              Positioned(
+                top: 60,
+                left: 0,
+                right: 0,
+                child: Obx(() {
+                  if (!ChatModel.isLocalUserActive.value) {
+                    return const SizedBox.shrink();
+                  }
+                  return Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.redAccent.withOpacity(0.3), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          )
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: BackdropFilter(
+                          filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                translate("Yerel kullanıcı önceliği aktif. Girişleriniz geçici olarak engellendi."),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
             ],
           ),
         ],

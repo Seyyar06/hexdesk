@@ -1101,6 +1101,7 @@ impl Connection {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     fn handle_input(receiver: std_mpsc::Receiver<MessageInput>, tx: Sender) {
         let mut block_input_mode = false;
+        let mut last_warning_time: u64 = 0;
         #[cfg(any(target_os = "windows", target_os = "macos"))]
         {
             rdev::set_mouse_extra_info(enigo::ENIGO_INPUT_EXTRA_VALUE);
@@ -1108,10 +1109,35 @@ impl Connection {
         }
         #[cfg(target_os = "macos")]
         reset_input_ondisconn();
+
+        static START_HOOK: std::sync::Once = std::sync::Once::new();
+        START_HOOK.call_once(|| {
+            #[cfg(windows)]
+            local_hook::start_local_input_hook();
+        });
+
         loop {
             match receiver.recv_timeout(std::time::Duration::from_millis(500)) {
                 Ok(v) => match v {
                     MessageInput::Mouse(mouse_input) => {
+                        if is_local_input_priority_active() && mouse_input.simulate {
+                            let now_secs = std::time::SystemTime::now()
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .unwrap_or_default()
+                                .as_secs();
+                            if now_secs > last_warning_time + 5 {
+                                last_warning_time = now_secs;
+                                let mut misc = Misc::new();
+                                misc.set_chat_message(ChatMessage {
+                                    text: "Yerel kullanıcı önceliği aktif. Girişleriniz geçici olarak engellendi.".to_string(),
+                                    ..Default::default()
+                                });
+                                let mut msg_out = Message::new();
+                                msg_out.set_misc(misc);
+                                tx.send((Instant::now(), Arc::new(msg_out))).ok();
+                            }
+                            continue;
+                        }
                         handle_mouse(
                             &mouse_input.msg,
                             mouse_input.conn_id,
@@ -1122,6 +1148,24 @@ impl Connection {
                         );
                     }
                     MessageInput::Key((mut msg, press)) => {
+                        if is_local_input_priority_active() {
+                            let now_secs = std::time::SystemTime::now()
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .unwrap_or_default()
+                                .as_secs();
+                            if now_secs > last_warning_time + 5 {
+                                last_warning_time = now_secs;
+                                let mut misc = Misc::new();
+                                misc.set_chat_message(ChatMessage {
+                                    text: "Yerel kullanıcı önceliği aktif. Girişleriniz geçici olarak engellendi.".to_string(),
+                                    ..Default::default()
+                                });
+                                let mut msg_out = Message::new();
+                                msg_out.set_misc(misc);
+                                tx.send((Instant::now(), Arc::new(msg_out))).ok();
+                            }
+                            continue;
+                        }
                         // Set the press state to false, use `down` only in `handle_key()`.
                         msg.press = false;
                         if press {
@@ -6160,3 +6204,89 @@ mod test {
         assert!(Ipv6Addr::from_str("0").is_err());
     }
 }
+
+use std::sync::atomic::AtomicU64;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+pub static LAST_LOCAL_INPUT_TIME: AtomicU64 = AtomicU64::new(0);
+
+pub fn is_local_input_priority_active() -> bool {
+    let enabled = hbb_common::config::Config::get_option("enable-local-input-priority");
+    if enabled != "Y" {
+        return false;
+    }
+    let last = LAST_LOCAL_INPUT_TIME.load(Ordering::SeqCst);
+    if last == 0 {
+        return false;
+    }
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    now < last + 1000
+}
+
+#[cfg(windows)]
+mod local_hook {
+    use std::sync::atomic::Ordering;
+    use std::time::{SystemTime, UNIX_EPOCH};
+    use winapi::shared::minwindef::{LPARAM, LRESULT, WPARAM};
+    use winapi::um::libloaderapi::GetModuleHandleW;
+    use winapi::um::winuser::{
+        CallNextHookEx, GetMessageW, SetWindowsHookExW, UnhookWindowsHookEx,
+        KBDLLHOOKSTRUCT, MSLLHOOKSTRUCT, WH_KEYBOARD_LL, WH_MOUSE_LL,
+    };
+
+    use super::LAST_LOCAL_INPUT_TIME;
+
+    unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+        if code >= 0 {
+            let ms = *(lparam as *const MSLLHOOKSTRUCT);
+            // dwExtraInfo == 100 means injected by Enigo/HexDesk
+            if ms.dwExtraInfo != 100 {
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis() as u64;
+                LAST_LOCAL_INPUT_TIME.store(now, Ordering::SeqCst);
+            }
+        }
+        CallNextHookEx(std::ptr::null_mut(), code, wparam, lparam)
+    }
+
+    unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+        if code >= 0 {
+            let kb = *(lparam as *const KBDLLHOOKSTRUCT);
+            // dwExtraInfo == 100 means injected by Enigo/HexDesk
+            if kb.dwExtraInfo != 100 {
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis() as u64;
+                LAST_LOCAL_INPUT_TIME.store(now, Ordering::SeqCst);
+            }
+        }
+        CallNextHookEx(std::ptr::null_mut(), code, wparam, lparam)
+    }
+
+    pub fn start_local_input_hook() {
+        std::thread::spawn(|| unsafe {
+            let module = GetModuleHandleW(std::ptr::null());
+            let mouse_hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_proc), module, 0);
+            let keyboard_hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), module, 0);
+
+            if !mouse_hook.is_null() && !keyboard_hook.is_null() {
+                let mut msg = std::mem::zeroed();
+                while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {}
+            }
+
+            if !mouse_hook.is_null() {
+                UnhookWindowsHookEx(mouse_hook);
+            }
+            if !keyboard_hook.is_null() {
+                UnhookWindowsHookEx(keyboard_hook);
+            }
+        });
+    }
+}
+

@@ -162,8 +162,13 @@ void runMainApp(bool startService) async {
   }
 
   // Set window option.
+  if (isDesktop) {
+    windowManager.setMinimumSize(const Size(950, 700));
+  }
   WindowOptions windowOptions = getHiddenTitleBarWindowOptions(
-      isMainWindow: true, alwaysOnTop: alwaysOnTop);
+      isMainWindow: true,
+      size: const Size(960, 720),
+      alwaysOnTop: alwaysOnTop);
   windowManager.waitUntilReadyToShow(windowOptions, () async {
     // Restore the location of the main window before window hide or show.
     await restoreWindowPosition(WindowType.Main);

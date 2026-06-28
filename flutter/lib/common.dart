@@ -4049,10 +4049,75 @@ void checkUpdate() {
         stateGlobal.updateUrl.value = url;
         if (stateGlobal.isManualUpdateCheck) {
           stateGlobal.isManualUpdateCheck = false;
+          // Close the checking dialog
+          Get.back();
+
           if (url.isEmpty) {
-            showToast(localeName.startsWith('tr') ? 'Uygulamanız güncel.' : 'Your application is up to date.');
+            Get.dialog(
+              AlertDialog(
+                backgroundColor: const Color(0xFF1B1D28),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: Text(
+                  localeName.startsWith('tr') ? 'Güncelleme Denetimi' : 'Check for Updates',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                content: Text(
+                  localeName.startsWith('tr')
+                      ? 'Uygulamanız en güncel sürümde.\nMevcut Sürüm: v1.4.8 (Derleme #9)'
+                      : 'Your application is up to date.\nCurrent Version: v1.4.8 (Build #9)',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: Text(
+                      localeName.startsWith('tr') ? 'Tamam' : 'OK',
+                      style: const TextStyle(color: Color(0xFF00F0FF)),
+                    ),
+                  ),
+                ],
+              ),
+            );
           } else {
-            showToast(localeName.startsWith('tr') ? 'Yeni bir güncelleme mevcut!' : 'A new update is available!');
+            final newVersion = bind.mainGetNewVersion().isEmpty ? "1.4.8" : bind.mainGetNewVersion();
+            Get.dialog(
+              AlertDialog(
+                backgroundColor: const Color(0xFF1B1D28),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: Text(
+                  localeName.startsWith('tr') ? 'Yeni Sürüm Mevcut!' : 'New Version Available!',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                content: Text(
+                  localeName.startsWith('tr')
+                      ? 'HexDesk için yeni bir sürüm bulundu!\nYeni Sürüm: v$newVersion\n\nŞimdi güncellemek istiyor musunuz?'
+                      : 'A new version of HexDesk has been found!\nNew Version: v$newVersion\n\nDo you want to update now?',
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: Text(
+                      localeName.startsWith('tr') ? 'Daha Sonra' : 'Later',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Get.back();
+                      bind.mainUpdateMe();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: MyTheme.button,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(
+                      localeName.startsWith('tr') ? 'Şimdi Güncelle' : 'Update Now',
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
         }
       }

@@ -6,6 +6,7 @@ import 'package:draggable_float_widget/draggable_float_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common/shared_state.dart';
+import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/mobile/pages/home_page.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
@@ -55,6 +56,8 @@ class MessageBody {
 
 class ChatModel with ChangeNotifier {
   static final clientModeID = -1;
+  static final RxBool isLocalUserActive = false.obs;
+  static Timer? _localUserActiveTimer;
 
   OverlayEntry? chatIconOverlayEntry;
   OverlayEntry? chatWindowOverlayEntry;
@@ -459,6 +462,14 @@ class ChatModel with ChangeNotifier {
   }
 
   insertMessage(MessageKey key, ChatMessage message) {
+    if (message.text.contains('Yerel kullanıcı önceliği aktif')) {
+      showToast(message.text);
+      isLocalUserActive.value = true;
+      _localUserActiveTimer?.cancel();
+      _localUserActiveTimer = Timer(const Duration(milliseconds: 2000), () {
+        isLocalUserActive.value = false;
+      });
+    }
     updateConnIdOfKey(key);
     if (!_messages.containsKey(key)) {
       _messages[key] = MessageBody(message.user, []);

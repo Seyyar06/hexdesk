@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'dart:ui' as ui;
@@ -9,6 +11,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/peer_tab_page.dart';
 import 'package:flutter_hbb/common/widgets/dialog.dart';
+import 'package:flutter_hbb/common/widgets/login.dart';
+
 import 'package:flutter_hbb/common/formatter/id_formatter.dart';
 import 'package:flutter_hbb/models/peer_model.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
@@ -293,6 +297,74 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ],
             ),
           ),
+          // Profile Area at the bottom of the sidebar (above version)
+          Obx(() {
+            final isLogin = gFFI.userModel.userName.value.isNotEmpty;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withOpacity(0.02) : Colors.black.withOpacity(0.02),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.account_circle_rounded,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                    size: 30,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isLogin ? gFFI.userModel.displayNameOrUserName : (localeName.startsWith('tr') ? 'Giriş Yapılmadı' : 'Not Logged In'),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (isLogin)
+                          Text(
+                            '@${gFFI.userModel.userName.value}',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 9,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isLogin ? Icons.logout_rounded : Icons.login_rounded,
+                      color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF2F65BA),
+                      size: 16,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      if (isLogin) {
+                        logOutConfirmDialog();
+                      } else {
+                        loginDialog();
+                      }
+                    },
+                  ),
+                ],
+              ),
+            );
+          }),
           // Version info at bottom
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -324,6 +396,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         setState(() {
           _currentMenu = menuId;
         });
+        if (menuId == 'remotes') {
+          gFFI.peerTabModel.setCurrentTab(0);
+        } else if (menuId == 'all_remotes') {
+          gFFI.peerTabModel.setCurrentTab(3);
+        } else if (menuId == 'groups') {
+          gFFI.peerTabModel.setCurrentTab(4);
+        }
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -406,7 +485,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       return Container(
         color: backgroundColor,
         padding: const EdgeInsets.all(16.0),
-        child: const PeerTabPage(),
+        child: PeerTabPage(key: ValueKey(_currentMenu)),
       );
     } else if (_currentMenu == 'settings') {
       return Container(
@@ -483,6 +562,20 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     ],
                   ),
                   const SizedBox(height: 32),
+                  if (!isCardClosed)
+                    FutureBuilder<Widget>(
+                      future: Future.value(
+                          Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
+                      builder: (_, data) {
+                        if (data.hasData) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 24.0),
+                            child: data.data!,
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -494,15 +587,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (!isCardClosed)
-                        FutureBuilder<Widget>(
-                          future: Future.value(
-                              Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
-                          builder: (_, data) {
-                            if (data.hasData) return data.data!;
-                            return const SizedBox();
-                          },
-                        ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -992,103 +1076,115 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       osIcon = Icons.desktop_windows_rounded;
     }
 
-    return Container(
-      height: 90,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradientColors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-      ),
-      child: Stack(
-        children: [
-          Center(
-            child: Container(
-              width: 90,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: Colors.white.withOpacity(0.15)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  )
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox(width: 3),
-                        Container(width: 2.5, height: 2.5, decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle)),
-                        const SizedBox(width: 1.5),
-                        Container(width: 2.5, height: 2.5, decoration: const BoxDecoration(color: Colors.amberAccent, shape: BoxShape.circle)),
-                        const SizedBox(width: 1.5),
-                        Container(width: 2.5, height: 2.5, decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle)),
-                      ],
-                    ),
+    return FutureBuilder<File>(
+      future: getApplicationDocumentsDirectory().then((dir) => File(path.join(dir.path, 'HexDesk', 'thumbnails', '${peer.id}.png'))),
+      builder: (context, snapshot) {
+        final file = snapshot.data;
+        final hasImage = file != null && file.existsSync();
+
+        return Container(
+          height: 90,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: hasImage ? null : LinearGradient(
+              colors: gradientColors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            image: hasImage ? DecorationImage(
+              image: FileImage(file),
+              fit: BoxFit.cover,
+            ) : null,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+          ),
+          child: hasImage ? const SizedBox() : Stack(
+            children: [
+              Center(
+                child: Container(
+                  width: 90,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(color: Colors.white.withOpacity(0.15)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      )
+                    ],
                   ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(3.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(width: 30, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(1))),
-                          const SizedBox(height: 2),
-                          Container(width: 50, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(1))),
-                          const SizedBox(height: 2),
-                          Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                        ),
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 3),
+                            Container(width: 2.5, height: 2.5, decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle)),
+                            const SizedBox(width: 1.5),
+                            Container(width: 2.5, height: 2.5, decoration: const BoxDecoration(color: Colors.amberAccent, shape: BoxShape.circle)),
+                            const SizedBox(width: 1.5),
+                            Container(width: 2.5, height: 2.5, decoration: const BoxDecoration(color: Colors.greenAccent, shape: BoxShape.circle)),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(3.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(width: 15, height: 8, decoration: BoxDecoration(color: const Color(0xFF00F0FF).withOpacity(0.2), borderRadius: BorderRadius.circular(1.5))),
-                              const SizedBox(width: 2),
-                              Container(width: 20, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(1))),
+                              Container(width: 30, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(1))),
+                              const SizedBox(height: 2),
+                              Container(width: 50, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(1))),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Container(width: 15, height: 8, decoration: BoxDecoration(color: const Color(0xFF00F0FF).withOpacity(0.2), borderRadius: BorderRadius.circular(1.5))),
+                                  const SizedBox(width: 2),
+                                  Container(width: 20, height: 3, decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(1))),
+                                ],
+                              ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              height: 8,
-              color: Colors.black.withOpacity(0.3),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(osIcon, color: Colors.white.withOpacity(0.7), size: 5),
-                  const SizedBox(width: 6),
-                  Container(width: 3, height: 1.5, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(0.5))),
-                  const SizedBox(width: 2),
-                  Container(width: 3, height: 1.5, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(0.5))),
-                  const SizedBox(width: 2),
-                  Container(width: 3, height: 1.5, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(0.5))),
-                ],
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 8,
+                  color: Colors.black.withOpacity(0.3),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(osIcon, color: Colors.white.withOpacity(0.7), size: 5),
+                      const SizedBox(width: 6),
+                      Container(width: 3, height: 1.5, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(0.5))),
+                      const SizedBox(width: 2),
+                      Container(width: 3, height: 1.5, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(0.5))),
+                      const SizedBox(width: 2),
+                      Container(width: 3, height: 1.5, decoration: BoxDecoration(color: Colors.white.withOpacity(0.5), borderRadius: BorderRadius.circular(0.5))),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1262,15 +1358,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildConnectionsView(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: const Color(0xFF0F1015),
+      color: isDark ? const Color(0xFF0F1015) : const Color(0xFFF7F8FA),
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             localeName.startsWith('tr') ? 'Aktif Bağlantılar' : 'Active Connections',
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -1287,15 +1384,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildLogsView(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: const Color(0xFF0F1015),
+      color: isDark ? const Color(0xFF0F1015) : const Color(0xFFF7F8FA),
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             localeName.startsWith('tr') ? 'Bağlantı Günlükleri' : 'Connection Logs',
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -1312,15 +1410,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildComingSoonView(BuildContext context, String title) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: const Color(0xFF0F1015),
+      color: isDark ? const Color(0xFF0F1015) : const Color(0xFFF7F8FA),
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Expanded(
