@@ -348,6 +348,15 @@ class ChatModel with ChangeNotifier {
   }
 
   receive(int id, String text) async {
+    if (text.contains('Yerel kullanıcı önceliği aktif')) {
+      showToast(text);
+      isLocalUserActive.value = true;
+      _localUserActiveTimer?.cancel();
+      _localUserActiveTimer = Timer(const Duration(milliseconds: 2000), () {
+        isLocalUserActive.value = false;
+      });
+      return;
+    }
     final session = parent.target;
     if (session == null) {
       debugPrint("Failed to receive msg, session state is null");

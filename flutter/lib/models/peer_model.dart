@@ -263,6 +263,10 @@ class Peers extends ChangeNotifier {
       final state = onlineStates[peer.id];
       peer.online = state != null && state != false;
     }
+    if (peers.isNotEmpty) {
+      final ids = peers.map((p) => p.id).toList(growable: false);
+      bind.queryOnlines(ids: ids);
+    }
     event = UpdateEvent.load;
     notifyListeners();
   }

@@ -63,6 +63,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var watchIsCanRecordAudio = false;
   Timer? _updateTimer;
   bool isCardClosed = false;
+  int _ticks = 0;
+  String _recentLayout = 'grid'; // 'grid', 'compact', 'list'
 
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
@@ -530,38 +532,42 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       color: Colors.transparent,
       child: Column(
         children: [
+          // Fixed Top Panel: Credential and remote ID forms
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 0.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildGlassmorphicCard(
+                    title: localeName.startsWith('tr') ? 'Güvenli Uzak Erişim' : 'Secure Remote Access',
+                    subtitle: localeName.startsWith('tr')
+                        ? 'Bağlanmak istediğiniz cihazın bilgilerini girin'
+                        : 'Enter details of the remote device you want to connect to',
+                    child: _buildRemoteConnectionForm(context),
+                  ),
+                ),
+                const SizedBox(width: 24),
+                if (!isOutgoingOnly)
+                  Expanded(
+                    child: _buildGlassmorphicCard(
+                      title: localeName.startsWith('tr') ? 'Bu Bilgisayar' : 'Your Credentials',
+                      subtitle: localeName.startsWith('tr')
+                          ? 'Uzak bağlantı izni vermek için bu bilgileri paylaşın'
+                          : 'Share these credentials to allow remote control of this PC',
+                      child: _buildLocalCredentialsForm(context),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // Scrollable Bottom Panel: Help cards and Recent Desktops
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _buildGlassmorphicCard(
-                          title: localeName.startsWith('tr') ? 'Güvenli Uzak Erişim' : 'Secure Remote Access',
-                          subtitle: localeName.startsWith('tr')
-                              ? 'Bağlanmak istediğiniz cihazın bilgilerini girin'
-                              : 'Enter details of the remote device you want to connect to',
-                          child: _buildRemoteConnectionForm(context),
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      if (!isOutgoingOnly)
-                        Expanded(
-                          child: _buildGlassmorphicCard(
-                            title: localeName.startsWith('tr') ? 'Bu Bilgisayar' : 'Your Credentials',
-                            subtitle: localeName.startsWith('tr')
-                                ? 'Uzak bağlantı izni vermek için bu bilgileri paylaşın'
-                                : 'Share these credentials to allow remote control of this PC',
-                            child: _buildLocalCredentialsForm(context),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
                   if (!isCardClosed)
                     FutureBuilder<Widget>(
                       future: Future.value(
@@ -586,6 +592,54 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.grid_view_rounded,
+                                color: _recentLayout == 'grid'
+                                    ? (isDark ? const Color(0xFF00F0FF) : const Color(0xFF2F65BA))
+                                    : Colors.grey),
+                            iconSize: 18,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              setState(() {
+                                _recentLayout = 'grid';
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(Icons.apps_rounded,
+                                color: _recentLayout == 'compact'
+                                    ? (isDark ? const Color(0xFF00F0FF) : const Color(0xFF2F65BA))
+                                    : Colors.grey),
+                            iconSize: 18,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              setState(() {
+                                _recentLayout = 'compact';
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(Icons.list_rounded,
+                                color: _recentLayout == 'list'
+                                    ? (isDark ? const Color(0xFF00F0FF) : const Color(0xFF2F65BA))
+                                    : Colors.grey),
+                            iconSize: 18,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              setState(() {
+                                _recentLayout = 'list';
+                              });
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1056,7 +1110,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
-  Widget _buildDesktopThumbnail(BuildContext context, Peer peer) {
+  Widget _buildDesktopThumbnail(BuildContext context, Peer peer, {double height = 90}) {
     List<Color> gradientColors;
     IconData osIcon;
     if (peer.platform.toLowerCase().contains('win')) {
@@ -1083,7 +1137,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         final hasImage = file != null && file.existsSync();
 
         return Container(
-          height: 90,
+          height: height,
           width: double.infinity,
           decoration: BoxDecoration(
             gradient: hasImage ? null : LinearGradient(
@@ -1189,6 +1243,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget _buildRecentDesktopCard(BuildContext context, Peer peer) {
+    if (_recentLayout == 'list') {
+      return _buildRecentDesktopListTile(context, peer);
+    }
+
+    final bool isCompact = _recentLayout == 'compact';
     final hideUsernameOnCard = bind.mainGetBuildinOption(key: kHideUsernameOnCard) == 'Y';
     final name = hideUsernameOnCard == true
         ? peer.hostname
@@ -1197,7 +1256,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      width: 250,
+      width: isCompact ? 180 : 250,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1B1D28) : Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -1218,110 +1277,219 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildDesktopThumbnail(context, peer),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          _buildDesktopThumbnail(context, peer, height: isCompact ? 65 : 90),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        getPlatformImage(
+                          peer.platform,
+                          size: 16,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: peer.online ? const Color(0xFF00FFCC) : Colors.grey,
+                            shape: BoxShape.circle,
+                            boxShadow: peer.online
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF00FFCC).withOpacity(0.4),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    )
+                                  ]
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 16),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        _showPeerOptionsMenu(context, peer);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      alias,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontSize: isCompact ? 12.5 : 14.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      name,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        fontSize: isCompact ? 9.5 : 10.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  height: 28,
+                  child: OutlinedButton(
+                    onPressed: () => connect(context, peer.id),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF00A3B0),
+                        width: 1.2,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      backgroundColor: isDark
+                          ? const Color(0xFF00F0FF).withOpacity(0.08)
+                          : const Color(0xFF00A3B0).withOpacity(0.05),
+                    ),
+                    child: Text(
+                      localeName.startsWith('tr') ? 'Bağlan' : 'Connect',
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF00A3B0),
+                        fontSize: isCompact ? 10.5 : 11.5,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentDesktopListTile(BuildContext context, Peer peer) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final alias = peer.alias.isEmpty ? formatID(peer.id) : peer.alias;
+    final hideUsernameOnCard = bind.mainGetBuildinOption(key: kHideUsernameOnCard) == 'Y';
+    final name = hideUsernameOnCard == true
+        ? peer.hostname
+        : '${peer.username}${peer.username.isNotEmpty && peer.hostname.isNotEmpty ? '@' : ''}${peer.hostname}';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1B1D28) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2C2F3A) : const Color(0xFFE4E6EB),
+          width: 1.2,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            getPlatformImage(
+              peer.platform,
+              size: 24,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
+            const SizedBox(width: 12),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: peer.online ? const Color(0xFF00FFCC) : Colors.grey,
+                shape: BoxShape.circle,
+                boxShadow: peer.online
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF00FFCC).withOpacity(0.4),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        )
+                      ]
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          getPlatformImage(
-                            peer.platform,
-                            size: 16,
-                            color: isDark ? Colors.white70 : Colors.black87,
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: peer.online ? const Color(0xFF00FFCC) : Colors.grey,
-                              shape: BoxShape.circle,
-                              boxShadow: peer.online
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(0xFF00FFCC).withOpacity(0.4),
-                                        blurRadius: 4,
-                                        spreadRadius: 1,
-                                      )
-                                    ]
-                                  : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 16),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          _showPeerOptionsMenu(context, peer);
-                        },
-                      ),
-                    ],
+                  Text(
+                    alias,
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        alias,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black87,
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        name,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                          fontSize: 10.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 28,
-                    child: OutlinedButton(
-                      onPressed: () => connect(context, peer.id),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF00A3B0),
-                          width: 1.2,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        backgroundColor: isDark
-                            ? const Color(0xFF00F0FF).withOpacity(0.08)
-                            : const Color(0xFF00A3B0).withOpacity(0.05),
-                      ),
-                      child: Text(
-                        localeName.startsWith('tr') ? 'Bağlan' : 'Connect',
-                        style: TextStyle(
-                          color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF00A3B0),
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 11,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            SizedBox(
+              height: 28,
+              child: OutlinedButton(
+                onPressed: () => connect(context, peer.id),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                    color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF00A3B0),
+                    width: 1.2,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  backgroundColor: isDark
+                      ? const Color(0xFF00F0FF).withOpacity(0.08)
+                      : const Color(0xFF00A3B0).withOpacity(0.05),
+                ),
+                child: Text(
+                  localeName.startsWith('tr') ? 'Bağlan' : 'Connect',
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFF00F0FF) : const Color(0xFF00A3B0),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.more_vert_rounded, color: Colors.grey, size: 20),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: () {
+                _showPeerOptionsMenu(context, peer);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1966,6 +2134,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     Get.put<TextEditingController>(_remoteIdEditingController);
     Get.put<IDTextEditingController>(_remoteIdController);
     _updateTimer = periodic_immediate(const Duration(seconds: 1), () async {
+      _ticks++;
+      if (_ticks % 10 == 0) {
+        final recentIds = gFFI.recentPeersModel.peers.map((p) => p.id).toList();
+        final favIds = gFFI.favoritePeersModel.peers.map((p) => p.id).toList();
+        final allIds = {...recentIds, ...favIds}.toList();
+        if (allIds.isNotEmpty) {
+          bind.queryOnlines(ids: allIds);
+        }
+      }
       await gFFI.serverModel.fetchID();
       final error = await bind.mainGetError();
       if (systemError != error) {

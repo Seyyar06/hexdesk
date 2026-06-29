@@ -88,6 +88,16 @@ class _RemotePageState extends State<RemotePage>
   late RxBool _remoteCursorMoved;
   late RxBool _keyboardEnabled;
   final _uniqueKey = UniqueKey();
+  final RxDouble _blockedX = (-1000.0).obs;
+  final RxDouble _blockedY = (-1000.0).obs;
+  final RxList<_BlockedClickEvent> _blockedClicks = <_BlockedClickEvent>[].obs;
+  void _addBlockedClick(Offset pos) {
+    final evt = _BlockedClickEvent(pos);
+    _blockedClicks.add(evt);
+    Timer(const Duration(milliseconds: 800), () {
+      _blockedClicks.remove(evt);
+    });
+  }
 
   var _blockableOverlayState = BlockableOverlayState();
 
@@ -647,26 +657,47 @@ class _RemotePageState extends State<RemotePage>
     PointerEnterEventListener? onEnter,
     PointerExitEventListener? onExit,
   ) {
-    return RawPointerMouseRegion(
-      onEnter: onEnter,
-      onExit: onExit,
-      onPointerDown: (event) {
-        // A double check for blur status.
-        // Note: If there's an `onPointerDown` event is triggered, `_isWindowBlur` is expected being false.
-        // Sometimes the system does not send the necessary focus event to flutter. We should manually
-        // handle this inconsistent status by setting `_isWindowBlur` to false. So we can
-        // ensure the grab-key thread is running when our users are clicking the remote canvas.
-        if (_isWindowBlur) {
-          debugPrint(
-              "Unexpected status: onPointerDown is triggered while the remote window is in blur status");
-          _isWindowBlur = false;
-        }
-        if (!_rawKeyFocusNode.hasFocus) {
-          _rawKeyFocusNode.requestFocus();
+    return Listener(
+      onPointerHover: (event) {
+        if (ChatModel.isLocalUserActive.value) {
+          _blockedX.value = event.localPosition.dx;
+          _blockedY.value = event.localPosition.dy;
         }
       },
-      inputModel: _ffi.inputModel,
-      child: child,
+      onPointerMove: (event) {
+        if (ChatModel.isLocalUserActive.value) {
+          _blockedX.value = event.localPosition.dx;
+          _blockedY.value = event.localPosition.dy;
+        }
+      },
+      onPointerDown: (event) {
+        if (ChatModel.isLocalUserActive.value) {
+          _blockedX.value = event.localPosition.dx;
+          _blockedY.value = event.localPosition.dy;
+          _addBlockedClick(event.localPosition);
+        }
+      },
+      child: RawPointerMouseRegion(
+        onEnter: onEnter,
+        onExit: onExit,
+        onPointerDown: (event) {
+          // A double check for blur status.
+          // Note: If there's an `onPointerDown` event is triggered, `_isWindowBlur` is expected being false.
+          // Sometimes the system does not send the necessary focus event to flutter. We should manually
+          // handle this inconsistent status by setting `_isWindowBlur` to false. So we can
+          // ensure the grab-key thread is running when our users are clicking the remote canvas.
+          if (_isWindowBlur) {
+            debugPrint(
+                "Unexpected status: onPointerDown is triggered while the remote window is in blur status");
+            _isWindowBlur = false;
+          }
+          if (!_rawKeyFocusNode.hasFocus) {
+            _rawKeyFocusNode.requestFocus();
+          }
+        },
+        inputModel: _ffi.inputModel,
+        child: child,
+      ),
     );
   }
 
@@ -764,6 +795,43 @@ class _RemotePageState extends State<RemotePage>
         );
       }),
     );
+    // Red transparent cursor indicating blocked input at the remote user's cursor position
+    paints.add(
+      Obx(() {
+        if (!ChatModel.isLocalUserActive.value || _blockedX.value < 0) {
+          return const Offstage();
+        }
+        return Positioned(
+          left: _blockedX.value - 12,
+          top: _blockedY.value - 12,
+          child: const IgnorePointer(
+            child: _BlockedCursorIndicator(),
+          ),
+        );
+      }),
+    );
+
+    // Blocked click ripples
+    paints.add(
+      Obx(() {
+        if (!ChatModel.isLocalUserActive.value || _blockedClicks.isEmpty) {
+          return const Offstage();
+        }
+        return Stack(
+          children: _blockedClicks.map((click) {
+            return Positioned(
+              key: click.key,
+              left: click.position.dx - 20,
+              top: click.position.dy - 20,
+              child: const IgnorePointer(
+                child: _BlockedClickRipple(),
+              ),
+            );
+          }).toList(),
+        );
+      }),
+    );
+
     return Stack(
       children: paints,
     );
@@ -1248,6 +1316,74 @@ class _LocalUserActiveIndicatorState extends State<_LocalUserActiveIndicator> wi
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _BlockedClickEvent {
+  final Offset position;
+  final UniqueKey key = UniqueKey();
+  _BlockedClickEvent(this.position);
+}
+
+class _BlockedCursorIndicator extends StatelessWidget {
+  const _BlockedCursorIndicator({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: -3.14159 / 4,
+      child: Icon(
+        Icons.navigation,
+        color: Colors.red.withOpacity(0.55),
+        size: 24,
+      ),
+    );
+  }
+}
+
+class _BlockedClickRipple extends StatefulWidget {
+  const _BlockedClickRipple({Key? key}) : super(key: key);
+
+  @override
+  State<_BlockedClickRipple> createState() => _BlockedClickRippleState();
+}
+
+class _BlockedClickRippleState extends State<_BlockedClickRipple> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          width: 40 * _controller.value,
+          height: 40 * _controller.value,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.red.withOpacity(1.0 - _controller.value),
+              width: 2.0,
+            ),
+          ),
         );
       },
     );

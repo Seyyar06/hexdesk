@@ -4039,6 +4039,18 @@ void earlyAssert() {
   assert('\1' == '1');
 }
 
+String formatVersionName(String version) {
+  final isTr = localeName.startsWith('tr');
+  final suffix = isTr ? 'Derleme' : 'Build';
+  if (version.contains('-')) {
+    final parts = version.split('-');
+    final ver = parts[0];
+    final build = parts[1];
+    return 'v$ver ($suffix #$build)';
+  }
+  return 'v$version';
+}
+
 void checkUpdate() {
   if (!isWeb) {
     platformFFI.registerEventHandler(
@@ -4063,8 +4075,8 @@ void checkUpdate() {
                 ),
                 content: Text(
                   localeName.startsWith('tr')
-                      ? 'Uygulamanız en güncel sürümde.\nMevcut Sürüm: v1.4.8 (Derleme #9)'
-                      : 'Your application is up to date.\nCurrent Version: v1.4.8 (Build #9)',
+                      ? 'Uygulamanız en güncel sürümde.\nMevcut Sürüm: ${formatVersionName(bind.mainGetVersion())}'
+                      : 'Your application is up to date.\nCurrent Version: ${formatVersionName(bind.mainGetVersion())}',
                   style: const TextStyle(color: Colors.grey),
                 ),
                 actions: [

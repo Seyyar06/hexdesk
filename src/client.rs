@@ -2313,6 +2313,12 @@ impl LoginConfigHandler {
         if view_only || self.get_toggle_option("disable-clipboard") {
             msg.disable_clipboard = BoolOption::Yes.into();
         }
+        let enable_local_input_priority = self.get_toggle_option("enable-local-input-priority");
+        if !enable_local_input_priority {
+            msg.enable_local_input_priority = BoolOption::No.into();
+        } else {
+            msg.enable_local_input_priority = BoolOption::Yes.into();
+        }
         msg.supported_decoding = MessageField::some(self.get_supported_decoding());
         Some(msg)
     }

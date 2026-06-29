@@ -1960,11 +1960,11 @@ class ImageModel with ChangeNotifier {
 
   // mobile only
   double get minScale {
-    if (_image == null) return 1.5;
+    if (_image == null) return 1.0;
     final size = parent.target!.canvasModel.getSize();
     final xscale = size.width / _image!.width;
     final yscale = size.height / _image!.height;
-    return min(xscale, yscale) / 1.5;
+    return min(xscale, yscale);
   }
 
   updateUserTextureRender() {
@@ -3666,6 +3666,7 @@ class FFI {
 
   // Getter for terminal models
   Map<int, TerminalModel> get terminalModels => _terminalModels;
+  Timer? _thumbnailTimer;
 
   FFI(SessionID? sId) {
     sessionId = sId ?? (isDesktop ? Uuid().v4obj() : _constSessionId);
@@ -3749,6 +3750,19 @@ class FFI {
       canvasModel.id = id;
       imageModel.id = id;
       cursorModel.peerId = id;
+      _thumbnailTimer?.cancel();
+      _thumbnailTimer = Timer.periodic(const Duration(seconds: 45), (timer) {
+        if (closed) {
+          timer.cancel();
+        } else {
+          bind.sessionTakeScreenshot(sessionId: sessionId, display: 0);
+        }
+      });
+      Timer(const Duration(seconds: 5), () {
+        if (!closed) {
+          bind.sessionTakeScreenshot(sessionId: sessionId, display: 0);
+        }
+      });
     }
 
     final isNewPeer = tabWindowId == null;
@@ -3943,6 +3957,8 @@ class FFI {
 
   /// Close the remote session.
   Future<void> close({bool closeSession = true}) async {
+    _thumbnailTimer?.cancel();
+    _thumbnailTimer = null;
     final peerId = id;
     if (peerId.isNotEmpty && !isWeb) {
       try {
