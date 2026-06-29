@@ -4,13 +4,6 @@ fn build_windows() {
     let file2 = "src/platform/windows_delete_test_cert.cc";
     cc::Build::new().file(file).file(file2).compile("windows");
     println!("cargo:rustc-link-lib=WtsApi32");
-    println!("cargo:rustc-link-lib=strmiids");
-    println!("cargo:rustc-link-lib=mfuuid");
-    if std::env::var("CARGO_FEATURE_HWCODEC").is_ok() {
-        println!("cargo:rustc-link-lib=static=swresample");
-        println!("cargo:rustc-link-lib=static=vpl");
-        println!("cargo:rustc-link-arg=/FORCE:MULTIPLE");
-    }
     println!("cargo:rerun-if-changed={}", file);
     println!("cargo:rerun-if-changed={}", file2);
 }

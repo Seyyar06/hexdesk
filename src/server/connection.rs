@@ -54,7 +54,6 @@ use scrap::android::{call_main_service_key_event, call_main_service_pointer_inpu
 use scrap::camera;
 use serde_derive::Serialize;
 use serde_json::{json, value::Value};
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
 use std::sync::atomic::Ordering;
 use std::{
     collections::HashSet,
