@@ -4523,6 +4523,19 @@ impl Connection {
                 }
             }
         }
+        if let Ok(q) = o.enable_local_input_priority.enum_value() {
+            if q != BoolOption::NotSet {
+                match q {
+                    BoolOption::Yes => {
+                        hbb_common::config::Config::set_option("enable-local-input-priority".to_string(), "Y".to_string());
+                    }
+                    BoolOption::No => {
+                        hbb_common::config::Config::set_option("enable-local-input-priority".to_string(), "N".to_string());
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
 
     async fn turn_on_privacy(&mut self, impl_key: String) {
@@ -6211,7 +6224,7 @@ pub static LAST_LOCAL_INPUT_TIME: AtomicU64 = AtomicU64::new(0);
 
 pub fn is_local_input_priority_active() -> bool {
     let enabled = hbb_common::config::Config::get_option("enable-local-input-priority");
-    if enabled != "Y" {
+    if enabled == "N" {
         return false;
     }
     let last = LAST_LOCAL_INPUT_TIME.load(Ordering::SeqCst);

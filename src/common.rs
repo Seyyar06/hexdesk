@@ -946,6 +946,23 @@ pub fn check_software_update() {
     }
 }
 
+pub fn do_check_software_update_with_fallback() -> hbb_common::ResultType<()> {
+    if let Err(e) = do_check_software_update() {
+        log::error!("Failed to check update: {}", e);
+        #[cfg(feature = "flutter")]
+        {
+            let mut m = HashMap::new();
+            m.insert("name", "check_software_update_finish");
+            m.insert("url", "");
+            if let Ok(data) = serde_json::to_string(&m) {
+                let _ = crate::flutter::push_global_event(crate::flutter::APP_TYPE_MAIN, data);
+            }
+        }
+    }
+    Ok(())
+}
+
+
 // No need to check `danger_accept_invalid_cert` for now.
 // Because the url is always `https://api.rustdesk.com/version/latest`.
 #[tokio::main(flavor = "current_thread")]

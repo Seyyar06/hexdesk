@@ -2083,6 +2083,17 @@ impl LoginConfigHandler {
                 BoolOption::No
             })
             .into();
+        } else if name == "enable-local-input-priority" {
+            let is_enabled = self.config.options.get("enable-local-input-priority").map(|v| v != "N").unwrap_or(true);
+            let next_val = if is_enabled { "N" } else { "Y" };
+            self.config.options.insert("enable-local-input-priority".to_string(), next_val.to_string());
+            self.config.store(&self.id);
+            option.enable_local_input_priority = (if next_val == "Y" {
+                BoolOption::Yes
+            } else {
+                BoolOption::No
+            })
+            .into();
         } else if name == "follow-remote-cursor" {
             config.follow_remote_cursor.v = !config.follow_remote_cursor.v;
             option.follow_remote_cursor = (if config.follow_remote_cursor.v {
@@ -2350,6 +2361,8 @@ impl LoginConfigHandler {
     pub fn get_toggle_option(&self, name: &str) -> bool {
         if name == "show-remote-cursor" {
             self.config.show_remote_cursor.v
+        } else if name == "enable-local-input-priority" {
+            self.config.options.get("enable-local-input-priority").map(|v| v != "N").unwrap_or(true)
         } else if name == "lock-after-session-end" {
             self.config.lock_after_session_end.v
         } else if name == keys::OPTION_TERMINAL_PERSISTENT {

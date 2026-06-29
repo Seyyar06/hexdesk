@@ -1289,8 +1289,20 @@ class _SafetyState extends State<_Safety> with AutomaticKeepAliveClientMixin {
     bool enabled = !locked;
     return _Card(title: 'Security', children: [
       shareRdp(context, enabled),
-      _OptionCheckBox(context, 'Yerel girişi önceliklendir (AnyDesk tarzı)', 'enable-local-input-priority',
-          reverse: false, enabled: enabled),
+      _OptionCheckBox(
+        context,
+        'Yerel girişi önceliklendir',
+        'enable-local-input-priority',
+        reverse: false,
+        enabled: enabled,
+        optGetter: () {
+          final val = bind.mainGetOptionSync(key: 'enable-local-input-priority');
+          return val != 'N'; // Default to true (checked) if not set to 'N'
+        },
+        optSetter: (k, v) async {
+          await bind.mainSetOption(key: k, value: v ? 'Y' : 'N');
+        },
+      ),
       _OptionCheckBox(context, 'Deny LAN discovery', 'enable-lan-discovery',
           reverse: true, enabled: enabled),
       ...directIp(context),

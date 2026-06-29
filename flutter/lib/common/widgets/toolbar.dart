@@ -902,6 +902,18 @@ Future<List<TToggleMenu>> toolbarDisplayToggle(
         ffi.qualityMonitorModel.checkShowQualityMonitor(sessionId);
       },
       child: Text(translate('Show quality monitor'))));
+  // enable-local-input-priority
+  if (isDefaultConn) {
+    final option = 'enable-local-input-priority';
+    final value = bind.sessionGetToggleOptionSync(sessionId: sessionId, arg: option);
+    v.add(TToggleMenu(
+        value: value,
+        onChanged: (value) {
+          if (value == null) return;
+          bind.sessionToggleOption(sessionId: sessionId, value: option);
+        },
+        child: Text(localeName.startsWith('tr') ? 'Yerel Giriş Önceliği' : 'Local Input Priority')));
+  }
   // mute
   if (isDefaultConn && perms['audio'] != false) {
     final option = 'disable-audio';

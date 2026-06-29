@@ -1748,7 +1748,9 @@ pub fn main_get_last_remote_id() -> String {
 }
 
 pub fn main_get_software_update_url() {
-    crate::common::check_software_update();
+    std::thread::spawn(move || {
+        let _ = crate::common::do_check_software_update_with_fallback();
+    });
 }
 
 pub fn main_get_home_dir() -> String {

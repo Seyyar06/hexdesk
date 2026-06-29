@@ -43,6 +43,24 @@ def apply_rebranding(base_dir):
         else:
             print("lib.rs no changes.")
 
+    # 1c. libs/hbb_common/protos/message.proto
+    proto_path = os.path.join(base_dir, "libs", "hbb_common", "protos", "message.proto")
+    if os.path.exists(proto_path):
+        print(f"Patching message.proto at {proto_path}...")
+        with open(proto_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        
+        patched = content
+        if "enable_local_input_priority" not in patched:
+            patched = patched.replace("BoolOption show_my_cursor = 19;", "BoolOption show_my_cursor = 19;\n  BoolOption enable_local_input_priority = 20;")
+        
+        if patched != content:
+            with open(proto_path, "w", encoding="utf-8") as f:
+                f.write(patched)
+            print("message.proto patched successfully!")
+        else:
+            print("message.proto no changes.")
+
     # 2. src/common.rs
     common_path = os.path.join(base_dir, "src", "common.rs")
     if os.path.exists(common_path):

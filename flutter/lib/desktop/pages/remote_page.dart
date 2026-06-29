@@ -724,6 +724,46 @@ class _RemotePageState extends State<RemotePage>
             QualityMonitor(_ffi.qualityMonitorModel), null, null),
       ),
     );
+    paints.add(
+      Obx(() {
+        if (!ChatModel.isLocalUserActive.value) {
+          return const Offstage();
+        }
+        return ListenableBuilder(
+          listenable: _ffi.cursorModel,
+          builder: (context, _) {
+            final m = _ffi.cursorModel;
+            final c = _ffi.canvasModel;
+            double cx = c.x;
+            double cy = c.y;
+            
+            if (c.viewStyle.style == kRemoteViewStyleOriginal &&
+                c.scrollStyle == ScrollStyle.scrollbar) {
+              final rect = c.parent.target!.ffiModel.rect;
+              if (rect != null) {
+                if (cx < 0) {
+                  cx = -rect.width * c.scale * c.scrollX;
+                }
+                if (cy < 0) {
+                  cy = -rect.height * c.scale * c.scrollY;
+                }
+              }
+            }
+
+            double x = m.x * c.scale + cx;
+            double y = m.y * c.scale + cy;
+
+            return Positioned(
+              left: x - 24,
+              top: y - 24,
+              child: const IgnorePointer(
+                child: _LocalUserActiveIndicator(),
+              ),
+            );
+          },
+        );
+      }),
+    );
     return Stack(
       children: paints,
     );
@@ -1149,6 +1189,67 @@ class CursorPaint extends StatelessWidget {
         y: y,
         scale: scale,
       ),
+    );
+  }
+}
+
+class _LocalUserActiveIndicator extends StatefulWidget {
+  const _LocalUserActiveIndicator({Key? key}) : super(key: key);
+
+  @override
+  State<_LocalUserActiveIndicator> createState() => _LocalUserActiveIndicatorState();
+}
+
+class _LocalUserActiveIndicatorState extends State<_LocalUserActiveIndicator> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            // Outer expanding ripple
+            Container(
+              width: 48 * _controller.value,
+              height: 48 * _controller.value,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.red.withOpacity(1.0 - _controller.value),
+                  width: 2.0,
+                ),
+              ),
+            ),
+            // Inner core red transparent cursor pointing up-left
+            Transform.rotate(
+              angle: -3.14159 / 4,
+              child: Icon(
+                Icons.navigation,
+                color: Colors.red.withOpacity(0.7),
+                size: 24,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

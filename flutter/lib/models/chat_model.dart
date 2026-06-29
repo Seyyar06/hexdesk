@@ -469,6 +469,7 @@ class ChatModel with ChangeNotifier {
       _localUserActiveTimer = Timer(const Duration(milliseconds: 2000), () {
         isLocalUserActive.value = false;
       });
+      return;
     }
     updateConnIdOfKey(key);
     if (!_messages.containsKey(key)) {
