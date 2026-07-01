@@ -483,12 +483,14 @@ class _RawTouchGestureDetectorRegionState
                 PointerEventToRust(kPointerEventKindTouch, 'scale', scale)
                     .toJson()));
       }
+    } else {
       // mobile
       ffi.canvasModel.updateScale(d.scale / _scale, d.focalPoint);
       _scale = d.scale;
       // Do NOT pan the canvas using focalPointDelta while scaling,
       // as updateScale already handles focal point alignment!
       // This makes the zoom smooth, straight, and stable without crooked sliding.
+    }
   }
 
   onTwoFingerScaleEnd(ScaleEndDetails d) async {
