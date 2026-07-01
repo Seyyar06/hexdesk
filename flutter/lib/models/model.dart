@@ -3758,7 +3758,8 @@ class FFI {
           bind.sessionTakeScreenshot(sessionId: sessionId, display: 0);
         }
       });
-      Timer(const Duration(seconds: 5), () {
+      // Wait 15s before first screenshot so the video stream stabilizes
+      Timer(const Duration(seconds: 15), () {
         if (!closed) {
           bind.sessionTakeScreenshot(sessionId: sessionId, display: 0);
         }

@@ -659,12 +659,8 @@ class _RemotePageState extends State<RemotePage>
   ) {
     return Listener(
       onPointerHover: (event) {
-        if (ChatModel.isLocalUserActive.value) {
-          _blockedX.value = event.localPosition.dx;
-          _blockedY.value = event.localPosition.dy;
-        }
-      },
-      onPointerMove: (event) {
+        // Only update reactive position when local user is actively blocking
+        // to avoid triggering Obx rebuilds on every mouse move during normal use
         if (ChatModel.isLocalUserActive.value) {
           _blockedX.value = event.localPosition.dx;
           _blockedY.value = event.localPosition.dy;

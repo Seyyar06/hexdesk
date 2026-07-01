@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -246,6 +247,8 @@ class Peers extends ChangeNotifier {
     }
   }
 
+  Timer? _queryOnlinesDebounce;
+
   void _updatePeers(Map<String, dynamic> evt) {
     final onlineStates = _getOnlineStates();
     if (getInitPeers != null) {
@@ -265,7 +268,11 @@ class Peers extends ChangeNotifier {
     }
     if (peers.isNotEmpty) {
       final ids = peers.map((p) => p.id).toList(growable: false);
-      bind.queryOnlines(ids: ids);
+      // Debounce: rapid successive updates only trigger one query after 500ms
+      _queryOnlinesDebounce?.cancel();
+      _queryOnlinesDebounce = Timer(const Duration(milliseconds: 500), () {
+        bind.queryOnlines(ids: ids);
+      });
     }
     event = UpdateEvent.load;
     notifyListeners();
