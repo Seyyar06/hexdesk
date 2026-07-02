@@ -3750,20 +3750,8 @@ class FFI {
       canvasModel.id = id;
       imageModel.id = id;
       cursorModel.peerId = id;
+      // Thumbnail auto-screenshot removed — was showing screenshot dialog every 15-45s
       _thumbnailTimer?.cancel();
-      _thumbnailTimer = Timer.periodic(const Duration(seconds: 45), (timer) {
-        if (closed) {
-          timer.cancel();
-        } else {
-          bind.sessionTakeScreenshot(sessionId: sessionId, display: 0);
-        }
-      });
-      // Wait 15s before first screenshot so the video stream stabilizes
-      Timer(const Duration(seconds: 15), () {
-        if (!closed) {
-          bind.sessionTakeScreenshot(sessionId: sessionId, display: 0);
-        }
-      });
     }
 
     final isNewPeer = tabWindowId == null;
