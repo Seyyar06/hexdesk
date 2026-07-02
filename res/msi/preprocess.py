@@ -85,7 +85,7 @@ def make_parser():
         "-m",
         "--manufacturer",
         type=str,
-        default="Hex Yazılım",
+        default="Hex Yazilim",
         help="The app manufacturer.",
     )
     return parser
