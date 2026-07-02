@@ -84,7 +84,27 @@ class _DesktopServerPageState extends State<DesktopServerPage>
         builder: (context, serverModel, child) {
           final body = Scaffold(
             backgroundColor: Theme.of(context).colorScheme.background,
-            body: ConnectionManager(),
+            body: Stack(
+              children: [
+                ConnectionManager(),
+                // Two-sided red cursor overlay: shows where the remote controller's mouse is
+                Obx(() {
+                  if (!ChatModel.hostCursorVisible.value) return const SizedBox.shrink();
+                  final screenSize = MediaQuery.of(context).size;
+                  final px = ChatModel.hostCursorX.value * screenSize.width;
+                  final py = ChatModel.hostCursorY.value * screenSize.height;
+                  return Positioned(
+                    left: px - 14,
+                    top: py - 14,
+                    child: IgnorePointer(
+                      child: _RemoteCursorOverlay(
+                        clicking: ChatModel.hostCursorClicking.value,
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
           );
           return isLinux
               ? buildVirtualWindowFrame(context, body)
@@ -1443,6 +1463,72 @@ class __FileTransferLogPageState extends State<_FileTransferLogPage> {
                   : statusListView(jobTable);
             },
           )),
+    );
+  }
+}
+
+// Host-side red cursor overlay: shows where the remote controller's mouse is
+class _RemoteCursorOverlay extends StatefulWidget {
+  final bool clicking;
+  const _RemoteCursorOverlay({required this.clicking});
+  @override
+  State<_RemoteCursorOverlay> createState() => _RemoteCursorOverlayState();
+}
+
+class _RemoteCursorOverlayState extends State<_RemoteCursorOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return SizedBox(
+          width: 28,
+          height: 28,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (widget.clicking)
+                Container(
+                  width: 28 * _controller.value,
+                  height: 28 * _controller.value,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.red.withOpacity(1.0 - _controller.value),
+                      width: 2.0,
+                    ),
+                  ),
+                ),
+              Transform.rotate(
+                angle: -3.14159 / 4,
+                child: Icon(
+                  Icons.navigation,
+                  color: Colors.red.withOpacity(0.7),
+                  size: 22,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

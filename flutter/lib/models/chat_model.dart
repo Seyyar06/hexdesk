@@ -58,6 +58,12 @@ class ChatModel with ChangeNotifier {
   static final clientModeID = -1;
   static final RxBool isLocalUserActive = false.obs;
   static Timer? _localUserActiveTimer;
+  // Host-side: position of the remote (controller) user's cursor, shown as red overlay
+  static final RxDouble hostCursorX = 0.0.obs;
+  static final RxDouble hostCursorY = 0.0.obs;
+  static final RxBool hostCursorClicking = false.obs;
+  static final RxBool hostCursorVisible = false.obs;
+  static Timer? _hostCursorHideTimer;
 
   OverlayEntry? chatIconOverlayEntry;
   OverlayEntry? chatWindowOverlayEntry;
@@ -348,11 +354,16 @@ class ChatModel with ChangeNotifier {
   }
 
   receive(int id, String text) async {
+    // Intercept special cursor broadcast from controller (two-sided red cursor)
+    if (text.startsWith('__cursor__:')) {
+      _updateHostCursor(text);
+      return;
+    }
     if (text.contains('Yerel kullanıcı önceliği aktif')) {
       showToast(text);
       isLocalUserActive.value = true;
       _localUserActiveTimer?.cancel();
-      _localUserActiveTimer = Timer(const Duration(milliseconds: 2000), () {
+      _localUserActiveTimer = Timer(const Duration(milliseconds: 5000), () {
         isLocalUserActive.value = false;
       });
       return;
@@ -471,11 +482,16 @@ class ChatModel with ChangeNotifier {
   }
 
   insertMessage(MessageKey key, ChatMessage message) {
+    // Intercept special cursor broadcast
+    if (message.text.startsWith('__cursor__:')) {
+      _updateHostCursor(message.text);
+      return;
+    }
     if (message.text.contains('Yerel kullanıcı önceliği aktif')) {
       showToast(message.text);
       isLocalUserActive.value = true;
       _localUserActiveTimer?.cancel();
-      _localUserActiveTimer = Timer(const Duration(milliseconds: 2000), () {
+      _localUserActiveTimer = Timer(const Duration(milliseconds: 5000), () {
         isLocalUserActive.value = false;
       });
       return;
@@ -523,6 +539,26 @@ class ChatModel with ChangeNotifier {
         mobileUpdateUnreadSum();
       });
     }
+  }
+
+  // Parse and apply a __cursor__ position message from the controller.
+  // Format: __cursor__:nx,ny:clicking  (e.g. __cursor__:0.5234,0.3120:0)
+  static void _updateHostCursor(String text) {
+    try {
+      final parts = text.substring('__cursor__:'.length).split(':');
+      if (parts.length < 2) return;
+      final coords = parts[0].split(',');
+      if (coords.length < 2) return;
+      hostCursorX.value = double.parse(coords[0]);
+      hostCursorY.value = double.parse(coords[1]);
+      hostCursorClicking.value = parts[1] == '1';
+      hostCursorVisible.value = true;
+      // Auto-hide after 3s if no new position arrives
+      _hostCursorHideTimer?.cancel();
+      _hostCursorHideTimer = Timer(const Duration(seconds: 3), () {
+        hostCursorVisible.value = false;
+      });
+    } catch (_) {}
   }
 
   close() {

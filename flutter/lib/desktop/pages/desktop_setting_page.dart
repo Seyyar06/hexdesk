@@ -2459,6 +2459,8 @@ class _AboutState extends State<_About> {
               if (!isWeb)
                 ElevatedButton(
                   onPressed: () {
+                    // Mark as manual BEFORE calling, so handler knows to show dialog
+                    stateGlobal.isManualUpdateCheck = true;
                     Get.dialog(
                       AlertDialog(
                         backgroundColor: const Color(0xFF1B1D28),
@@ -2486,8 +2488,39 @@ class _AboutState extends State<_About> {
                       ),
                       barrierDismissible: false,
                     );
-                    stateGlobal.isManualUpdateCheck = true;
                     bind.mainGetSoftwareUpdateUrl();
+                    // Safety timeout: if no response in 12s, close dialog and show error
+                    Future.delayed(const Duration(seconds: 12), () {
+                      if (stateGlobal.isManualUpdateCheck) {
+                        stateGlobal.isManualUpdateCheck = false;
+                        Get.back();
+                        Get.dialog(
+                          AlertDialog(
+                            backgroundColor: const Color(0xFF1B1D28),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: Text(
+                              localeName.startsWith('tr') ? 'Güncelleme Denetimi' : 'Check for Updates',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                            content: Text(
+                              localeName.startsWith('tr')
+                                  ? 'Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.'
+                                  : 'Could not reach update server. Check your internet connection.',
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Get.back(),
+                                child: Text(
+                                  localeName.startsWith('tr') ? 'Tamam' : 'OK',
+                                  style: const TextStyle(color: Color(0xFF00F0FF)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    });
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: MyTheme.button,

@@ -4065,6 +4065,7 @@ void checkUpdate() {
           Get.back();
 
           if (url.isEmpty) {
+            final currentVersion = await bind.mainGetVersion();
             Get.dialog(
               AlertDialog(
                 backgroundColor: const Color(0xFF1B1D28),
@@ -4075,8 +4076,8 @@ void checkUpdate() {
                 ),
                 content: Text(
                   localeName.startsWith('tr')
-                      ? 'Uygulamanız en güncel sürümde.\nMevcut Sürüm: ${formatVersionName(bind.mainGetVersion())}'
-                      : 'Your application is up to date.\nCurrent Version: ${formatVersionName(bind.mainGetVersion())}',
+                      ? 'Uygulamanız en güncel sürümde.\nMevcut Sürüm: ${formatVersionName(currentVersion)}'
+                      : 'Your application is up to date.\nCurrent Version: ${formatVersionName(currentVersion)}',
                   style: const TextStyle(color: Colors.grey),
                 ),
                 actions: [

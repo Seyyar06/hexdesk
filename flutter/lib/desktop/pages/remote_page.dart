@@ -91,11 +91,34 @@ class _RemotePageState extends State<RemotePage>
   final RxDouble _blockedX = (-1000.0).obs;
   final RxDouble _blockedY = (-1000.0).obs;
   final RxList<_BlockedClickEvent> _blockedClicks = <_BlockedClickEvent>[].obs;
+  Timer? _cursorSendTimer; // throttle: send cursor pos to host max 10fps
+
   void _addBlockedClick(Offset pos) {
     final evt = _BlockedClickEvent(pos);
     _blockedClicks.add(evt);
     Timer(const Duration(milliseconds: 800), () {
       _blockedClicks.remove(evt);
+    });
+  }
+
+  // Send normalized cursor position to host so the remote user sees the red cursor.
+  void _sendCursorToHost(double dx, double dy, bool clicking) {
+    if (_cursorSendTimer != null) return; // throttled to 10fps
+    final w = _ffi.canvasModel.getDisplayWidth().toDouble();
+    final h = _ffi.canvasModel.getDisplayHeight().toDouble();
+    if (w <= 0 || h <= 0) return;
+    // Convert pixel pos on the viewer canvas to normalized [0,1] remote screen coords
+    final scale = _ffi.canvasModel.scale;
+    final offsetX = _ffi.canvasModel.x;
+    final offsetY = _ffi.canvasModel.y;
+    final remoteX = (dx - offsetX) / (w * scale);
+    final remoteY = (dy - offsetY) / (h * scale);
+    final nx = remoteX.clamp(0.0, 1.0);
+    final ny = remoteY.clamp(0.0, 1.0);
+    final msg = '__cursor__:${nx.toStringAsFixed(4)},${ny.toStringAsFixed(4)}:${clicking ? '1' : '0'}';
+    bind.sessionSendChat(sessionId: sessionId, text: msg);
+    _cursorSendTimer = Timer(const Duration(milliseconds: 100), () {
+      _cursorSendTimer = null;
     });
   }
 
@@ -664,6 +687,7 @@ class _RemotePageState extends State<RemotePage>
         if (ChatModel.isLocalUserActive.value) {
           _blockedX.value = event.localPosition.dx;
           _blockedY.value = event.localPosition.dy;
+          _sendCursorToHost(event.localPosition.dx, event.localPosition.dy, false);
         }
       },
       onPointerDown: (event) {
@@ -671,6 +695,7 @@ class _RemotePageState extends State<RemotePage>
           _blockedX.value = event.localPosition.dx;
           _blockedY.value = event.localPosition.dy;
           _addBlockedClick(event.localPosition);
+          _sendCursorToHost(event.localPosition.dx, event.localPosition.dy, true);
         }
       },
       child: RawPointerMouseRegion(
